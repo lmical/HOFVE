@@ -1,0 +1,1 @@
+WENO5DeC5 CFL=0.5 Rusanov TEST=3 for Euler TEST=1 for SW
