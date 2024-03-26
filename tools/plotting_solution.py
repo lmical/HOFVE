@@ -10,6 +10,16 @@ parser.add_option("-d", "--dir",    action="store", type="string", dest="d", def
 options, args = parser.parse_args()
 folder = options.d
 
+aspect_ratio="quad"
+
+if aspect_ratio=="quad":
+    aspect_ratio_dimensions=[4, 4, 4]
+elif aspect_ratio=="rect_X":
+    aspect_ratio_dimensions=[14, 4, 4]
+else: 
+    print("Aspcet ratio undefined")
+    quit()
+
 Gmm=1.4
 
 print(folder)
@@ -106,7 +116,7 @@ def plotting(folder_name, what_plot='all'):
         ax_ro.set_xlabel('X')
         ax_ro.set_ylabel('Y')
         # ax_eta.set_zlabel(r'$\rho$')
-        ax_ro.set_box_aspect([14, 4, 4])  # Set aspect ratio
+        ax_ro.set_box_aspect(aspect_ratio_dimensions)  # Set aspect ratio
         # ax_eta.view_init(elev=30, azim=175) 
 
         if what_plot=='primitive' or what_plot=='all':
@@ -115,7 +125,7 @@ def plotting(folder_name, what_plot='all'):
             ax_u.set_title('u')
             ax_u.set_xlabel('X')
             ax_u.set_ylabel('Y')
-            ax_u.set_box_aspect([14, 4, 4])  # Set aspect ratio
+            ax_u.set_box_aspect(aspect_ratio_dimensions)  # Set aspect ratio
             # ax_u.set_zlabel('u')
 
             ax_v.clear()
@@ -123,7 +133,7 @@ def plotting(folder_name, what_plot='all'):
             ax_v.set_title('v')
             ax_v.set_xlabel('X')
             ax_v.set_ylabel('Y')
-            ax_v.set_box_aspect([14, 4, 4])  # Set aspect ratio
+            ax_v.set_box_aspect(aspect_ratio_dimensions)  # Set aspect ratio
             # ax_v.set_zlabel('v')
 
             ax_p.clear()
@@ -131,7 +141,7 @@ def plotting(folder_name, what_plot='all'):
             ax_p.set_title('p')
             ax_p.set_xlabel('X')
             ax_p.set_ylabel('Y')
-            ax_p.set_box_aspect([14, 4, 4])  # Set aspect ratio
+            ax_p.set_box_aspect(aspect_ratio_dimensions)  # Set aspect ratio
             # ax_p.set_zlabel('p')
 
         if what_plot=='conservative' or what_plot=='all':
@@ -140,7 +150,7 @@ def plotting(folder_name, what_plot='all'):
             ax_qx.set_title(r'$q_x$')
             ax_qx.set_xlabel('X')
             ax_qx.set_ylabel('Y')
-            ax_qx.set_box_aspect([14, 4, 4])  # Set aspect ratio
+            ax_qx.set_box_aspect(aspect_ratio_dimensions)  # Set aspect ratio
             # ax_qx.set_zlabel(r'$q_x$')
 
             ax_qy.clear()
@@ -197,6 +207,6 @@ def plotting(folder_name, what_plot='all'):
 if __name__=='__main__':
     
     # plotting(folder,'density')
-    # plotting(folder,'primitive')
+    plotting(folder,'primitive')
     # plotting(folder,'conservative')
-    plotting(folder,'all')
+    # plotting(folder,'all')

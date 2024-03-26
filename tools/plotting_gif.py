@@ -11,6 +11,16 @@ parser.add_option("-d", "--dir",    action="store", type="string", dest="d", def
 options, args = parser.parse_args()
 folder_name = options.d
 
+aspect_ratio="quad"
+
+if aspect_ratio=="quad":
+    aspect_ratio_dimensions=[4, 4, 4]
+elif aspect_ratio=="rect_X":
+    aspect_ratio_dimensions=[14, 4, 4]
+else: 
+    print("Aspcet ratio undefined")
+    quit()
+
 print(folder_name)
 if not os.path.isdir(folder_name):
     raise ValueError("Folder not valid. Run as 'python plotting.py --dir folder_name'")
@@ -79,7 +89,7 @@ def plot_one_step(i):
     ax_ro.set_xlabel('X')
     ax_ro.set_ylabel('Y')
     # ax_eta.set_zlabel(r'$\eta$')
-    ax_ro.set_box_aspect([14, 4, 4])  # Set aspect ratio
+    ax_ro.set_box_aspect(aspect_ratio_dimensions)  # Set aspect ratio
     ax_ro.view_init(elev=25*(1-perc_simul)+5, azim=-90*perc_simul-45*(1-perc_simul)) 
     fig.tight_layout()
     return fig
