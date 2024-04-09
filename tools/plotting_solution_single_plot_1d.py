@@ -64,23 +64,48 @@ def plotting(folder_name, what_plot='all'):
     if what_plot=='density':
         ax_ro = fig.add_subplot(111)
     elif what_plot=='primitive':
-        ax_ro = fig.add_subplot(141)
-        ax_u  = fig.add_subplot(142)
-        ax_v  = fig.add_subplot(143)
-        ax_p  = fig.add_subplot(144)
+        ax_ro = fig.add_subplot(131)
+        if variable=="X":
+            ax_u  = fig.add_subplot(132)
+        elif variable=="Y":
+            ax_v  = fig.add_subplot(132)
+        else:
+            print("Variable not implemented")
+            print(variable)
+            quit()
+        ax_p  = fig.add_subplot(133)
     elif what_plot=='conservative':
-        ax_ro = fig.add_subplot(141)
-        ax_qx = fig.add_subplot(142)
-        ax_qy = fig.add_subplot(143)
-        ax_E  = fig.add_subplot(144)
+        ax_ro = fig.add_subplot(131)
+        if variable=="X":
+            ax_qx = fig.add_subplot(132)
+        elif variable=="Y":
+            ax_qy = fig.add_subplot(132)
+        else:
+            print("Variable not implemented")
+            print(variable)
+            quit()
+        ax_E  = fig.add_subplot(133)
     elif what_plot=='all':
-        ax_ro = fig.add_subplot(241)
-        ax_u  = fig.add_subplot(242)
-        ax_v  = fig.add_subplot(243)
-        ax_p  = fig.add_subplot(244)
-        ax_qx = fig.add_subplot(245)
-        ax_qy = fig.add_subplot(246)
-        ax_E  = fig.add_subplot(247)
+        ax_ro = fig.add_subplot(231)
+        if variable=="X":
+            ax_u  = fig.add_subplot(232)
+        elif variable=="Y":
+            ax_v  = fig.add_subplot(232)
+        else:
+            print("Variable not implemented")
+            print(variable)
+            quit()
+        ax_p  = fig.add_subplot(233)
+        if variable=="X":
+            ax_qx = fig.add_subplot(234)
+        elif variable=="Y":
+            ax_qy = fig.add_subplot(234)
+        else:
+            print("Variable not implemented")
+            print(variable)
+            quit()
+
+        ax_E  = fig.add_subplot(235)
     else:
         print("Plotting option not available")
         print("It was")
@@ -134,17 +159,23 @@ def plotting(folder_name, what_plot='all'):
 
 
         if what_plot=='primitive' or what_plot=='all':
-            ax_u.clear()
-            ax_u.plot(z, U)
-            ax_u.set_title('u')
-            ax_u.set_xlabel(namevariable)
-            # ax_u.set_ylabel('u')
 
-            ax_v.clear()
-            ax_v.plot(z, V)
-            ax_v.set_title('v')
-            ax_v.set_xlabel(namevariable)
-            # ax_v.set_ylabel('v')
+            if variable=="X":
+                ax_u.clear()
+                ax_u.plot(z, U)
+                ax_u.set_title('u')
+                ax_u.set_xlabel(namevariable)
+                # ax_u.set_ylabel('u')
+            elif variable=="Y":
+                ax_v.clear()
+                ax_v.plot(z, V)
+                ax_v.set_title('v')
+                ax_v.set_xlabel(namevariable)
+                # ax_v.set_ylabel('v')
+            else:
+                print("Variable not implemented")
+                print(variable)
+                quit()
 
             ax_p.clear()
             ax_p.plot(z, P)
@@ -153,17 +184,22 @@ def plotting(folder_name, what_plot='all'):
             # ax_p.set_ylabel('p')
 
         if what_plot=='conservative' or what_plot=='all':
-            ax_qx.clear()
-            ax_qx.plot(z, RO * U)
-            ax_qx.set_title(r'$\rho u$')
-            ax_qx.set_xlabel(namevariable)
-            # ax_qx.set_ylabel(r'$\rho u$')
-
-            ax_qy.clear()
-            ax_qy.plot(z, RO * V)
-            ax_qy.set_title(r'$\rho v$')
-            ax_qy.set_xlabel(namevariable)
-            # ax_qy.set_ylabel(r'$\rho v$')
+            if variable=="X":
+                ax_qx.clear()
+                ax_qx.plot(z, RO * U)
+                ax_qx.set_title(r'$\rho u$')
+                ax_qx.set_xlabel(namevariable)
+                # ax_qx.set_ylabel(r'$\rho u$')
+            elif variable=="Y":
+                ax_qy.clear()
+                ax_qy.plot(z, RO * V)
+                ax_qy.set_title(r'$\rho v$')
+                ax_qy.set_xlabel(namevariable)
+                # ax_qy.set_ylabel(r'$\rho v$')
+            else:
+                print("Variable not implemented")
+                print(variable)
+                quit()
 
             ax_E.clear()
             ax_E.plot(z, P/(Gmm-1.)+0.5*RO*(U**2+V**2))
@@ -202,7 +238,7 @@ def plotting(folder_name, what_plot='all'):
 
 if __name__=='__main__':
     
-    # plotting(folder,'density')
+    plotting(folder,'density')
     # plotting(folder,'primitive')
     # plotting(folder,'conservative')
-    plotting(folder,'all')
+    # plotting(folder,'all')
