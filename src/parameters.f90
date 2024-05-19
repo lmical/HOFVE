@@ -43,6 +43,7 @@ USE MOD_FiniteVolume2D_vars,ONLY: VarNameVisu
 USE MOD_FiniteVolume2D_vars,ONLY: GravitationalPotentialFlag
 USE MOD_FiniteVolume2D_vars,ONLY: maxTimeSteps
 USE MOD_FiniteVolume2D_vars,ONLY: LinearWeightsOnly
+USE MOD_FiniteVolume2D_vars,ONLY: MStepsMax
 #ifdef SW
 USE MOD_FiniteVolume2D_vars,ONLY: Gravity
 USE MOD_FiniteVolume2D_vars,ONLY: Kappa
@@ -198,6 +199,10 @@ maxTimeSteps = 100000
 !* 2=MUSCL
 !* 3=WENO3
 !* 4,5=WENO5
+!* 7=WENO7
+!* 9=WENO9
+!* 11=WENO11
+!* 13=WENO13
 !*---------------------------------------------
 !* Different MINMOD limiters
 !* 20=2 = MUSCL
@@ -301,6 +306,26 @@ PRINT*, "--------------------------"
   PRINT*, "--------------------------"
 #endif
 
+
+
+SELECT CASE (timescheme)
+  CASE(12,21,22,-2)    !* 20-n DeCu; 21-n DeCdu 
+    MstepsMax=2 !*Order 1,2
+  CASE(13,-3,-4) 
+    MstepsMax=3 !*Order 3,4
+  CASE(15,-5) 
+    MstepsMax=4 !*Order 5
+  CASE(17,-7) 
+    MstepsMax=5 !*Order 7
+  CASE(19,-9) 
+    MstepsMax=6 !*Order 9
+  CASE(-11) 
+    MstepsMax=7 !*Order 11
+  CASE(-13) 
+    MstepsMax=8 !*Order 13
+  CASE DEFAULT
+    MstepsMax=1
+END SELECT 
 
 
 

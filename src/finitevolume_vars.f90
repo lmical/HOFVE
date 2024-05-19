@@ -65,6 +65,7 @@ REAL,ALLOCATABLE    :: K5(:,:,:)
 REAL,ALLOCATABLE    :: FUp(:,:,:,:)
 REAL,ALLOCATABLE    :: Up(:,:,:,:)
 REAL,ALLOCATABLE    :: Ua(:,:,:,:)
+INTEGER             :: MStepsMax
 
 REAL,ALLOCATABLE    :: UtWB(:,:,:)
 REAL,ALLOCATABLE    :: Gravitational_Potential_Averages(:,:)

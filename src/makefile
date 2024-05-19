@@ -11,7 +11,7 @@ COMPILER=GNU DEBUG
 ifeq ($(findstring GNU,$(COMPILER)),GNU)
   FC=gfortran
   INSTRUCTION=-march=native
-  FCFLAGS  = -xf95-cpp-input -cpp -fdefault-real-8 -fdefault-double-8 -fbackslash -ffree-line-length-300 -ffpe-trap=invalid
+  FCFLAGS  = -xf95-cpp-input -cpp -fdefault-real-8 -fdefault-double-8 -fbackslash -ffree-line-length-300 -ffpe-trap=invalid -ffree-line-length-none
   FLFLAGS  = -fdefault-real-8 -fbackslash
   ifeq ($(findstring DEBUG,$(COMPILER)),DEBUG)
     FCFLAGS  += -g -O0 -ggdb3 -fbounds-check -finit-real=nan -fbacktrace

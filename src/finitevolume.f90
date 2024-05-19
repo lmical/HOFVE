@@ -87,6 +87,7 @@ USE MOD_FiniteVolume2D_vars,ONLY: WeightsGP
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGPBnd
 USE MOD_FiniteVolume2D_vars,ONLY: timescheme 
 USE MOD_FiniteVolume2D_vars,ONLY: maxTimeSteps 
+USE MOD_FiniteVolume2D_vars,ONLY: MStepsMax
 
 
 #ifdef PATANKAR 
@@ -123,6 +124,18 @@ SELECT CASE (Reconstruction)
   CASE(4,5) ! WENO5 !*NB: In principle 3 nGPs would have bee ok but there were negative weights
     nGhosts = 2
     nGPs    = 4
+  CASE(7) ! WENO7
+    nGhosts = 3
+    nGPs    = 4
+  CASE(9) ! WENO9
+    nGhosts = 4
+    nGPs    = 5
+  CASE(11) ! WENO11
+    nGhosts = 5
+    nGPs    = 6
+  CASE(13) ! WENO13
+    nGhosts = 6
+    nGPs    = 7
   CASE DEFAULT
     ErrorMessage = "Reconstruction not implemented"
     WRITE(*,*) ErrorMessage
@@ -160,9 +173,9 @@ ALLOCATE(K3(1:nVar,1:nElemsX,1:nElemsY))
 ALLOCATE(K4(1:nVar,1:nElemsX,1:nElemsY))
 ALLOCATE(K5(1:nVar,1:nElemsX,1:nElemsY))
 
-ALLOCATE(Ua(1:4,1:nVar,1:nElemsX,1:nElemsY))
-ALLOCATE(Up(1:4,1:nVar,1:nElemsX,1:nElemsY))
-ALLOCATE(FUp(1:4,1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE(Ua(1:MStepsMax,1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE(Up(1:MStepsMax,1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE(FUp(1:MStepsMax,1:nVar,1:nElemsX,1:nElemsY))
 
 #ifdef WELLBALANCED
 ALLOCATE( UtWB(1:nVar,1:nElemsX,1:nElemsY))

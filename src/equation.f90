@@ -334,6 +334,10 @@ SUBROUTINE SourceTerms(t)
 USE MOD_Reconstruction     ,ONLY: MUSCL
 USE MOD_Reconstruction     ,ONLY: WENO3_SecondSweep 
 USE MOD_Reconstruction     ,ONLY: WENO5_SecondSweep 
+USE MOD_Reconstruction     ,ONLY: WENO7_SecondSweep
+! USE MOD_Reconstruction     ,ONLY: WENO9_SecondSweep
+! USE MOD_Reconstruction     ,ONLY: WENO11_SecondSweep
+! USE MOD_Reconstruction     ,ONLY: WENO13_SecondSweep 
 USE MOD_FiniteVolume2D_vars,ONLY: S
 USE MOD_FiniteVolume2D_vars,ONLY: nGPs
 USE MOD_FiniteVolume2D_vars,ONLY: nDims
@@ -410,6 +414,26 @@ IF (GravitationalPotentialFlag .GT. 0) THEN
           DO iGP=1,nGPs
             DO iVar=1,nVar
               CALL WENO5_SecondSweep( Vtemp(iVar,ii-nGhosts:ii+nGhosts,jj,iGP) , Vtemp2(iVar,1:nGPs,iGP,ii,jj) )
+            END DO
+            DO jGP=1,nGPs
+              S_in_qp(1:nVar,jGP,iGP,ii,jj) = SourceFunc( Vtemp2(1:nVar,jGP,iGP,ii,jj) , MeshGP(:,ii,jj,jGP,iGP)  )
+            END DO 
+          END DO 
+        END DO
+      END DO
+    CASE(7)
+      DO iVar=1,nVar
+        DO jj=1,nElemsY
+          DO ii=-nGhosts,nElemsX+nGhosts+1
+             CALL WENO7_SecondSweep( U(iVar,ii,jj-nGhosts:jj+nGhosts) , Vtemp(iVar,ii,jj,1:nGPs) )
+          END DO
+        END DO
+      END DO
+      DO jj=1,nElemsY
+        DO ii=1,nElemsX
+          DO iGP=1,nGPs
+            DO iVar=1,nVar
+              CALL WENO7_SecondSweep( Vtemp(iVar,ii-nGhosts:ii+nGhosts,jj,iGP) , Vtemp2(iVar,1:nGPs,iGP,ii,jj) )
             END DO
             DO jGP=1,nGPs
               S_in_qp(1:nVar,jGP,iGP,ii,jj) = SourceFunc( Vtemp2(1:nVar,jGP,iGP,ii,jj) , MeshGP(:,ii,jj,jGP,iGP)  )

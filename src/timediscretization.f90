@@ -69,7 +69,7 @@ DO WHILE ( iStep .LT. maxTimeSteps)
   dt = MIN(MIN(dt_min,tAnalyze-t),MIN(dt_min,tEnd-t))
   
   SELECT CASE(timescheme)
-    CASE(1)
+    CASE(1,-1)
       CALL TimeDiscretizationByForwardEuler(t)
     CASE(2)
       CALL TimeDiscretizationBySSPRK2(t)
@@ -79,14 +79,16 @@ DO WHILE ( iStep .LT. maxTimeSteps)
       CALL TimeDiscretizationBySSPRK4(t)
     CASE(5)
       CALL TimeDiscretizationByRK65(t)
-    CASE(12)
+    CASE(12,-2)
       CALL TimeDiscretizationByDeC2(t)
-    CASE(13)
+    CASE(13,-3)
       CALL TimeDiscretizationByDeC3(t)
-    CASE(14)
+    CASE(14,-4)
       CALL TimeDiscretizationByDeC4(t)
-    CASE(15)
+    CASE(15,-5)
       CALL TimeDiscretizationByDeC5(t)
+    CASE(17,-7)
+      CALL TimeDiscretizationByDeC7(t)
 #ifdef PATANKAR
     CASE(21)
       CALL TimeDiscretizationByMPEuler(t)
@@ -862,6 +864,116 @@ END DO
 U(1:nVar,1:nElemsX,1:nElemsY) = Ua(MSteps,1:nVar,1:nElemsX,1:nElemsY)
 !-------------------------------------------------------------------------------!
 END SUBROUTINE TimeDiscretizationByDeC5
+!===============================================================================!
+!
+!
+!===============================================================================!
+SUBROUTINE TimeDiscretizationByDeC7(t)
+!-------------------------------------------------------------------------------!
+USE MOD_FiniteVolume2D,     ONLY: FVTimeDerivative
+USE MOD_FiniteVolume2D_vars,ONLY: U
+USE MOD_FiniteVolume2D_vars,ONLY: Ut
+USE MOD_FiniteVolume2D_vars,ONLY: nVar
+USE MOD_FiniteVolume2D_vars,ONLY: dt
+USE MOD_FiniteVolume2D_vars,ONLY: nElemsX
+USE MOD_FiniteVolume2D_vars,ONLY: nElemsY
+USE MOD_FiniteVolume2D_vars,ONLY: FUp !F(U^(k-1))
+USE MOD_FiniteVolume2D_vars,ONLY: Ua  !U^(k)
+USE MOD_FiniteVolume2D_vars,ONLY: Up  !U^(k-1)
+!-------------------------------------------------------------------------------!
+IMPLICIT NONE
+!-------------------------------------------------------------------------------!
+! >> FORMAL ARGUMENTS                                                           !
+!-------------------------------------------------------------------------------!
+REAL,INTENT(IN) :: t
+!-------------------------------------------------------------------------------!
+! >> LOCAL VARIABLES                                                            !
+!-------------------------------------------------------------------------------!
+REAL, DIMENSION(5,5) :: thetaDeC
+REAL, DIMENSION(5)   :: betaDeC
+REAL, DIMENSION(5)   :: tStage
+INTEGER, PARAMETER   :: KCorr = 7
+INTEGER              :: MSteps
+INTEGER              :: ii, jj, kk
+!-------------------------------------------------------------------------------!
+MSteps=5
+thetaDeC = RESHAPE((/ 0.0000000000000000000   , &
+                      0.06772843218615692829  , &
+                      0.04062500000000000139  , &
+                      0.05370013924241452685  , &
+                      0.05000000000000000278  , &
+                      0.0000000000000000000   , &
+                      0.1197447693434117028   , &
+                      0.3031841833230428107   , &
+                      0.2615863979968067188   , &
+                      0.2722222222222221988   , &
+                      0.0000000000000000000   , &
+                      -0.02173572186655812685 , & 
+                      0.1777777777777777568   , & 
+                      0.3772912774221137688   , & 
+                      0.3555555555555555691   , & 
+                      0.0000000000000000000   , &
+                      0.01063582422541549388  , &
+                      -0.03096196110082054948 , &
+                      0.1524774528788104544   , &
+                      0.2722222222222221988   , &
+                      0.0000000000000000000   , &
+                      -0.003700139242414531883, &
+                      0.009374999999999994449 , &
+                      -0.01772843218615688388 , &
+                      0.05000000000000000278 /), shape(thetaDeC))
+
+
+
+
+
+! U^m(k) = U^0 + \Delta t \sum theta_{r,m} F(U^r(k-1))
+betaDeC = (/ 0.0000000000000000000 , 0.1726731646460114566, 0.5000000000000, 0.8273268353539885434, 1.0000000000000000000/)
+
+tStage = t + betaDeC*dt
+
+DO ii = 1,MSteps
+  Ua(ii,1:nVar,1:nElemsX,1:nElemsY) = U(1:nVar,1:nElemsX,1:nElemsY)
+  Up(ii,1:nVar,1:nElemsX,1:nElemsY) = U(1:nVar,1:nElemsX,1:nElemsY)
+END DO
+
+CALL FVTimeDerivative(tStage(1))
+
+DO ii = 1,MSteps
+  FUp(ii,1:nVar,1:nElemsX,1:nElemsY) = Ut(1:nVar,1:nElemsX,1:nElemsY)
+END DO
+
+DO kk = 1,KCorr
+  IF (kk == KCorr) THEN
+    ii = MSteps
+    Ua(ii,1:nVar,1:nElemsX,1:nElemsY) = Ua(1,1:nVar,1:nElemsX,1:nElemsY)
+    DO jj = 1,MSteps
+      Ua(ii,1:nVar,1:nElemsX,1:nElemsY) = Ua(ii,1:nVar,1:nElemsX,1:nElemsY) + dt*thetaDeC(ii,jj)*FUp(jj,1:nVar,1:nElemsX,1:nElemsY)
+    END DO
+  ELSE
+    DO ii = 2,MSteps
+      Ua(ii,1:nVar,1:nElemsX,1:nElemsY) = Ua(1,1:nVar,1:nElemsX,1:nElemsY)
+      DO jj = 1,MSteps
+        Ua(ii,1:nVar,1:nElemsX,1:nElemsY) = Ua(ii,1:nVar,1:nElemsX,1:nElemsY) + dt*thetaDeC(ii,jj)*FUp(jj,1:nVar,1:nElemsX,1:nElemsY)
+      END DO
+    END DO
+  END IF
+
+  IF (kk .NE. KCorr) THEN
+    DO ii = 2,MSteps
+      U(1:nVar,1:nElemsX,1:nElemsY) = Ua(ii,1:nVar,1:nElemsX,1:nElemsY)
+      CALL FVTimeDerivative(tStage(ii))
+      FUp(ii,1:nVar,1:nElemsX,1:nElemsY) = Ut(1:nVar,1:nElemsX,1:nElemsY)
+    END DO
+  END IF
+
+  Up=Ua
+
+END DO
+
+U(1:nVar,1:nElemsX,1:nElemsY) = Ua(MSteps,1:nVar,1:nElemsX,1:nElemsY)
+!-------------------------------------------------------------------------------!
+END SUBROUTINE TimeDiscretizationByDeC7
 !===============================================================================!
 !
 !
