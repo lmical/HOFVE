@@ -121,18 +121,24 @@ SELECT CASE (Reconstruction)
   CASE(3) ! WENO3
     nGhosts = 1
     nGPs    = 2
-  CASE(4,5) ! WENO5 !*NB: In principle 3 nGPs would have bee ok but there were negative weights
+  CASE(4,5) ! WENO5
     nGhosts = 2
-    nGPs    = 4
+    nGPs    = 4  !*NB: In principle 3 nGPs would have been ok but there were negative weights
   CASE(7) ! WENO7
     nGhosts = 3
     nGPs    = 4
   CASE(9) ! WENO9
     nGhosts = 4
-    nGPs    = 5
+    nGPs    = 8  !*NB: In principle 5 and 6 and 7 and 8 nGPs would have been ok but there were negative weights
+    PRINT*, "I did not find a number of points without noegative quadrature weights for WENO9"
+    PRINT*, "I tested until 8"
+    STOP
   CASE(11) ! WENO11
     nGhosts = 5
-    nGPs    = 6
+    nGPs    = 7  !*NB: In principle 6 and 7 and 8 nGPs would have been ok but there were negative weights
+    PRINT*, "I did not find a number of points without noegative quadrature weights for WENO11"
+    PRINT*, "I tested until 8"
+    STOP
   CASE(13) ! WENO13
     nGhosts = 6
     nGPs    = 7
