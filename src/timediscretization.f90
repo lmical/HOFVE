@@ -104,7 +104,7 @@ DO WHILE ( iStep .LT. maxTimeSteps)
   ! PRINT*, "time ", t, ", time iter ", iStep, ", dt ", dt
   local_min = MINVAL(U(1,1:nElemsX,1:nElemsY))
   global_min = MIN(local_min, global_min)
-  ! PRINT*, "min h", local_min, ", min at all time ", global_min
+  ! PRINT*, "min ro", local_min, ", min at all time ", global_min
   tGlobal = t
   IF (ABS(tAnalyze-t) .LT. 1.0E-10) THEN
     CALL WriteSolutionToDisk(t)

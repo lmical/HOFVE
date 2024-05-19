@@ -199,6 +199,13 @@ maxTimeSteps = 100000
 Reconstruction    = 4
 ReconstructionFix = Reconstruction
 
+IF (nargs > 4) THEN
+   CALL get_command_ARGUMENT(5, arg)
+   READ(arg, *) iarg
+   Reconstruction = iarg
+   Reconstruction = ReconstructionFix
+END IF
+
 !*---------------------------------------------
 !*TIME SCHEME LEGEND
 !*---------------------------------------------
@@ -212,7 +219,20 @@ ReconstructionFix = Reconstruction
 
 timescheme = 15
 
+IF (nargs > 5) THEN
+   CALL get_command_ARGUMENT(6, arg)
+   READ(arg, *) iarg
+   timescheme = iarg
+END IF
+
 WhichRiemannSolver = 1 !* 1 Rusanov, 2 Exact
+
+IF (nargs > 6) THEN
+   CALL get_command_ARGUMENT(7, arg)
+   READ(arg, *) iarg
+   WhichRiemannSolver = iarg
+END IF
+
 
 WhichOutput  = 0 ! 0 Nothing, 1 Octave, 2 Tecplot, 3 Both
 nOutputFiles = 4
