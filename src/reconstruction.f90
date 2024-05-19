@@ -163,7 +163,7 @@ SELECT CASE (Reconstruction)
                   MESH_DX(1))
       END DO
     END DO
-  CASE(3,4)
+  CASE(3,4,5)
     DO jj=1,nElemsY
       DO ii=0,nElemsX+1
         IF (.NOT. Ind(1,ii,jj)) THEN
@@ -281,7 +281,7 @@ SELECT CASE (Reconstruction)
                    MESH_DX(2))
       END DO
     END DO
-  CASE(3,4)
+  CASE(3,4,5)
     DO jj=0,nElemsY+1
       DO ii=1,nElemsX
         IF (.NOT. Ind(2,ii,jj)) THEN
@@ -424,7 +424,7 @@ SELECT CASE (ReconstructionFix)
         END IF
       END DO
     END DO
-  CASE(3,4)
+  CASE(3,4,5)
     DO jj=1,nElemsY
       DO ii=0,nElemsX+1
         IF (Ind(1,ii,jj)) THEN
@@ -566,7 +566,7 @@ SELECT CASE (ReconstructionFix)
         END IF
       END DO
     END DO
-  CASE(3,4)
+  CASE(3,4,5)
     DO jj=0,nElemsY+1
       DO ii=1,nElemsX
         IF (Ind(2,ii,jj)) THEN
@@ -908,7 +908,7 @@ SELECT CASE(WhichReconstruction)
       CALL WENO3_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
       CALL WENO3_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
     END DO
-  CASE(4)
+  CASE(4,5)
     DO iVar=1,nVar
       DO jj=-nGhosts,nGhosts
         CALL WENO5_FirstSweep(&
@@ -964,7 +964,7 @@ SELECT CASE(WhichReconstruction)
       CALL WENO3_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
       CALL WENO3_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
     END DO
-  CASE(4)
+  CASE(4,5)
     DO iVar=1,nVar
       DO ii=-nGhosts,nGhosts
         CALL WENO5_FirstSweep(&
@@ -990,6 +990,7 @@ SUBROUTINE WENO3_FirstSweep(Q,WM,WP)
 !-------------------------------------------------------------------------------!
 USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
 USE MOD_FiniteVolume2D_vars,ONLY: WENOEPS, WENOEXP
+USE MOD_FiniteVolume2D_vars,ONLY: LinearWeightsOnly
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -1032,8 +1033,12 @@ omega2 = alpha2/(alpha1 + alpha2)
 
 W1 = 0.5*(    Q(-1) + Q(+0))
 W2 = 0.5*(3.0*Q(+0) - Q(+1))
-WM = omega1*W1 + omega2*W2
 
+IF (LinearWeightsOnly) THEN
+  WM = gamma1*W1 + gamma2*W2
+ELSE
+  WM = omega1*W1 + omega2*W2
+END IF
 
 !------------------------------!
 ! WP: x_{i+1/2}                !
@@ -1053,7 +1058,12 @@ omega2 = alpha2/(alpha1 + alpha2)
 ! Reconstructed Polynomial
 W1 = 0.5*(-Q(-1) + 3.0*Q(+0))
 W2 = 0.5*( Q(+0) +     Q(+1))
-WP = omega1*W1 + omega2*W2
+
+IF (LinearWeightsOnly) THEN
+  WP = gamma1*W1 + gamma2*W2
+ELSE
+  WP = omega1*W1 + omega2*W2
+END IF
 
 !-------------------------------------------------------------------------------!
 END SUBROUTINE WENO3_FirstSweep
@@ -1067,6 +1077,7 @@ SUBROUTINE WENO3_SecondSweep(Q,W)
 USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
 USE MOD_FiniteVolume2D_vars,ONLY: nGPs
 USE MOD_FiniteVolume2D_vars,ONLY: WENOEPS, WENOEXP
+USE MOD_FiniteVolume2D_vars,ONLY: LinearWeightsOnly
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -1109,8 +1120,12 @@ omega2 = alpha2/(alpha1 + alpha2)
 ! Reconstructed Polynomial
 W1   = (1.0/6.0)*(SQRT(3.0)*Q(-1) + 6.0*Q(+0) - SQRT(3.0)*Q(+0))
 W2   = (1.0/6.0)*(SQRT(3.0)*Q(+0) + 6.0*Q(+0) - SQRT(3.0)*Q(+1))
-W(1) = omega1*W1 + omega2*W2
 
+IF (LinearWeightsOnly) THEN
+  W(1) = gamma1*W1 + gamma2*W2
+ELSE
+  W(1) = omega1*W1 + omega2*W2
+END IF
 
 !------------------------------!
 ! Point: x_{j+1/(2*sqrt(3))}   !
@@ -1130,8 +1145,12 @@ omega2 = alpha2/(alpha1 + alpha2)
 ! Reconstructed Polynomial
 W1   = (1.0/6.0)*(-SQRT(3.0)*Q(-1) + 6.0*Q(+0) + SQRT(3.0)*Q(+0))
 W2   = (1.0/6.0)*(-SQRT(3.0)*Q(+0) + 6.0*Q(+0) + SQRT(3.0)*Q(+1))
-W(2) = omega1*W1 + omega2*W2
 
+IF (LinearWeightsOnly) THEN
+  W(2) = gamma1*W1 + gamma2*W2
+ELSE
+  W(2) = omega1*W1 + omega2*W2
+END IF
 !-------------------------------------------------------------------------------!
 END SUBROUTINE WENO3_SecondSweep
 !===============================================================================!
@@ -1144,6 +1163,7 @@ SUBROUTINE WENO5_FirstSweep(Q,WM,WP)
 USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
 USE MOD_FiniteVolume2D_vars,ONLY: nGPs
 USE MOD_FiniteVolume2D_vars,ONLY: WENOEPS, WENOEXP
+USE MOD_FiniteVolume2D_vars,ONLY: LinearWeightsOnly
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -1194,8 +1214,12 @@ omega3 = alpha3/(alpha1 + alpha2 + alpha3)
 W1 = (1.0/6.0)*(    -Q(-2) + 5.0*Q(-1) + 2.0*Q(+0))
 W2 = (1.0/6.0)*( 2.0*Q(-1) + 5.0*Q(+0) -     Q(+1))
 W3 = (1.0/6.0)*(11.0*Q(+0) - 7.0*Q(+1) + 2.0*Q(+2))
-WM = omega1*W1 + omega2*W2 + omega3*W3
 
+IF (LinearWeightsOnly) THEN
+  WM = gamma1*W1 + gamma2*W2 + gamma3*W3
+ELSE
+  WM = omega1*W1 + omega2*W2 + omega3*W3
+END IF
 
 !------------------------------!
 ! WP: x_{i+1/2}                !
@@ -1218,8 +1242,12 @@ omega3 = alpha3/(alpha1 + alpha2 + alpha3)
 W1 = (1.0/6.0)*(2.0*Q(-2) - 7.0*Q(-1) + 11.0*Q(+0))
 W2 = (1.0/6.0)*(   -Q(-1) + 5.0*Q(+0) +  2.0*Q(+1))
 W3 = (1.0/6.0)*(2.0*Q(+0) + 5.0*Q(+1) -      Q(+2))
-WP = omega1*W1 + omega2*W2 + omega3*W3
 
+IF (LinearWeightsOnly) THEN
+  WP = gamma1*W1 + gamma2*W2 + gamma3*W3
+ELSE
+  WP = omega1*W1 + omega2*W2 + omega3*W3
+END IF
 !-------------------------------------------------------------------------------!
 END SUBROUTINE WENO5_FirstSweep
 !===============================================================================!
@@ -1232,6 +1260,7 @@ SUBROUTINE WENO5_SecondSweep2nGPs(Q,W)
 USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
 USE MOD_FiniteVolume2D_vars,ONLY: nGPs
 USE MOD_FiniteVolume2D_vars,ONLY: WENOEPS, WENOEXP
+USE MOD_FiniteVolume2D_vars,ONLY: LinearWeightsOnly
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -1290,9 +1319,12 @@ W3     = +          12.0*Q(+0) &
          + 3.0*SQRT(3.0)*Q(+0) &
          - 4.0*SQRT(3.0)*Q(+1) &
          +     SQRT(3.0)*Q(+2)
-W(1)   = (omega1*W1 + omega2*W2 + omega3*W3)/12.0
 
-
+IF (LinearWeightsOnly) THEN
+  W(1)   = (gamma1*W1 + gamma2*W2 + gamma3*W3)/12.0
+ELSE
+  W(1)   = (omega1*W1 + omega2*W2 + omega3*W3)/12.0
+END IF
 !------------------------------!
 ! Point: x_{j+1/(2*sqrt(3))}   !
 !------------------------------!
@@ -1323,8 +1355,12 @@ W3     = +          12.0*Q(+0) &
          - 3.0*SQRT(3.0)*Q(+0) &
          + 4.0*SQRT(3.0)*Q(+1) &
          -     SQRT(3.0)*Q(+2)
-W(2)   = (omega1*W1 + omega2*W2 + omega3*W3)/12.0
 
+IF (LinearWeightsOnly) THEN
+  W(2)   = (gamma1*W1 + gamma2*W2 + gamma3*W3)/12.0
+ELSE
+  W(2)   = (omega1*W1 + omega2*W2 + omega3*W3)/12.0
+END IF
 !-------------------------------------------------------------------------------!
 END SUBROUTINE WENO5_SecondSweep2nGPs
 !===============================================================================!
@@ -1337,6 +1373,7 @@ SUBROUTINE WENO5_SecondSweep3nGPs(Q,W)
 USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
 USE MOD_FiniteVolume2D_vars,ONLY: nGPs
 USE MOD_FiniteVolume2D_vars,ONLY: WENOEPS, WENOEXP
+USE MOD_FiniteVolume2D_vars,ONLY: LinearWeightsOnly
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -1392,8 +1429,12 @@ W2     = + (SQRT(15.)/20. + 1./30.)*Q(-1) &
 W3     = + (3.*SQRT(15.)/20. + 31./30.)*Q(+0) &
          - (SQRT(15.)/5. + 1./15.)*Q(+1) &
          + (SQRT(15.)/20. + 1./30.)*Q(+2)
-W(1)   = (omega1*W1 + omega2*W2 + omega3*W3)
 
+IF (LinearWeightsOnly) THEN
+  W(1)   = (gamma1*W1 + gamma2*W2 + gamma3*W3)
+ELSE
+  W(1)   = (omega1*W1 + omega2*W2 + omega3*W3)
+END IF
 
 !------------------------------!
 ! Point: x_{j}                 !
@@ -1424,8 +1465,11 @@ W3     = + 23./24.*Q(+0) &
          + 1. /12.*Q(+1) &
          - 1./24. *Q(+2)
 
-W(2)   = (omega1*W1 + omega2*W2 + omega3*W3)
-
+IF (LinearWeightsOnly) THEN
+  W(2)   = (gamma1*W1 + gamma2*W2 + gamma3*W3)
+ELSE
+  W(2)   = (omega1*W1 + omega2*W2 + omega3*W3)
+END IF
 
 
 !------------------------------!
@@ -1456,7 +1500,12 @@ W2     = + (-SQRT(15.)/20. + 1./30.)*Q(-1) &
 W3     = + (-3.*SQRT(15.)/20. + 31./30.)*Q(+0) &
          + (SQRT(15.)/5. - 1./15.)*Q(+1) &
          + (-SQRT(15.)/20. + 1./30.)*Q(+2)
-W(3)   = (omega1*W1 + omega2*W2 + omega3*W3)
+
+IF (LinearWeightsOnly) THEN
+  W(3)   = (gamma1*W1 + gamma2*W2 + gamma3*W3)
+ELSE
+  W(3)   = (omega1*W1 + omega2*W2 + omega3*W3)
+END IF
 
 !-------------------------------------------------------------------------------!
 END SUBROUTINE WENO5_SecondSweep3nGPs
@@ -1470,6 +1519,7 @@ SUBROUTINE WENO5_SecondSweep(Q,W) !4nGPS
 USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
 USE MOD_FiniteVolume2D_vars,ONLY: nGPs
 USE MOD_FiniteVolume2D_vars,ONLY: WENOEPS, WENOEXP
+USE MOD_FiniteVolume2D_vars,ONLY: LinearWeightsOnly
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -1519,7 +1569,13 @@ omega3 = alpha3/(alpha1 + alpha2 + alpha3)
 W1 = -0.1642562761719537 * Q(-2)+0.7590807081409336 * Q(-1)+0.4051755680310201 * Q(0)+0.0000000000000000 * Q(1)+0.0000000000000000 * Q(2)
 W2 = +0.0000000000000000 * Q(-2)+0.2663118796250726 * Q(-1)+0.8979443965468811 * Q(0)-0.1642562761719537 * Q(1)+0.0000000000000000 * Q(2)
 W3 = +0.0000000000000000 * Q(-2)+0.0000000000000000 * Q(-1)+1.6968800354220990 * Q(0)-0.9631919150471715 * Q(1)+0.2663118796250726 * Q(2)
-W(1)   = (omega1*W1 + omega2*W2 + omega3*W3)
+
+IF (LinearWeightsOnly) THEN
+  W(1)   = (gamma1*W1 + gamma2*W2 + gamma3*W3)
+ELSE
+  W(1)   = (omega1*W1 + omega2*W2 + omega3*W3)
+END IF
+
 
 !--------------------------------------------!
 ! Point: x_{j-1/2*sqrt(3/7-2/7*sqrt(6/5))}   !
@@ -1545,7 +1601,11 @@ W1 = -0.1122135388132497 * Q(-2)+0.3944175994189276 * Q(-1)+0.7177959393943222 *
 W2 = +0.0000000000000000 * Q(-2)+0.0577769829791784 * Q(-1)+1.0544365558340714 * Q(0)-0.1122135388132497 * Q(1)+0.0000000000000000 * Q(2)
 W3 = +0.0000000000000000 * Q(-2)+0.0000000000000000 * Q(-1)+1.2277675047716066 * Q(0)-0.2855444877507849 * Q(1)+0.0577769829791784 * Q(2)
 
-W(2)   = (omega1*W1 + omega2*W2 + omega3*W3)
+IF (LinearWeightsOnly) THEN
+  W(2)   = (gamma1*W1 + gamma2*W2 + gamma3*W3)
+ELSE
+  W(2)   = (omega1*W1 + omega2*W2 + omega3*W3)
+END IF
 
 
 !--------------------------------------------!
@@ -1572,7 +1632,11 @@ W1 = +0.0577769829791784 * Q(-2)-0.2855444877507849 * Q(-1)+1.2277675047716066 *
 W2 = +0.0000000000000000 * Q(-2)-0.1122135388132497 * Q(-1)+1.0544365558340714 * Q(0)+0.0577769829791784 * Q(1)+0.0000000000000000 * Q(2)
 W3 = +0.0000000000000000 * Q(-2)+0.0000000000000000 * Q(-1)+0.7177959393943222 * Q(0)+0.3944175994189276 * Q(1)-0.1122135388132497 * Q(2)
 
-W(3)   = (omega1*W1 + omega2*W2 + omega3*W3)
+IF (LinearWeightsOnly) THEN
+  W(3)   = (gamma1*W1 + gamma2*W2 + gamma3*W3)
+ELSE
+  W(3)   = (omega1*W1 + omega2*W2 + omega3*W3)
+END IF
 
 
 
@@ -1599,7 +1663,11 @@ omega3 = alpha3/(alpha1 + alpha2 + alpha3)
 W1 = +0.2663118796250726 * Q(-2)-0.9631919150471715 * Q(-1)+1.6968800354220990 * Q(0)+0.0000000000000000 * Q(1)+0.0000000000000000 * Q(2)
 W2 = +0.0000000000000000 * Q(-2)-0.1642562761719537 * Q(-1)+0.8979443965468811 * Q(0)+0.2663118796250726 * Q(1)+0.0000000000000000 * Q(2)
 W3 = +0.0000000000000000 * Q(-2)+0.0000000000000000 * Q(-1)+0.4051755680310201 * Q(0)+0.7590807081409336 * Q(1)-0.1642562761719537 * Q(2)
-W(4)   = (omega1*W1 + omega2*W2 + omega3*W3)
+IF (LinearWeightsOnly) THEN
+  W(4)   = (gamma1*W1 + gamma2*W2 + gamma3*W3)
+ELSE
+  W(4)   = (omega1*W1 + omega2*W2 + omega3*W3)
+END IF
 
 !-------------------------------------------------------------------------------!
 END SUBROUTINE WENO5_SecondSweep

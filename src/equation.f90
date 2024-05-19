@@ -236,6 +236,19 @@ SELECT CASE(WhichInitialCondition)
 
     CALL PrimToCons(Prim,Cons)
 
+  !*------------------------------------------
+  !*[5] Advection of smooth density sin4
+  !*------------------------------------------
+  CASE(5)
+    u_inf = 1.0
+    v_inf = -0.5
+    p_inf = 1.0
+    Prim(1) = 2.0+SIN(2.0*PI*( x(1)+x(2)-t*(u_inf+v_inf) ))**4 
+    Prim(2)=u_inf
+    Prim(3)=v_inf
+    Prim(4)=p_inf
+
+    CALL PrimToCons(Prim,Cons)
 
   !*------------------------------------------
   !*[892] Smooth periodic IC with the purpose of verifying conservation
@@ -384,7 +397,7 @@ IF (GravitationalPotentialFlag .GT. 0) THEN
           END DO 
         END DO
       END DO
-    CASE(4)
+    CASE(4,5)
       DO iVar=1,nVar
         DO jj=1,nElemsY
           DO ii=-nGhosts,nElemsX+nGhosts+1
@@ -404,9 +417,8 @@ IF (GravitationalPotentialFlag .GT. 0) THEN
           END DO 
         END DO
       END DO
-
     CASE DEFAULT
-      ErrorMessage = "Reconstruction not implemented"
+      ErrorMessage = "Reconstruction not implemented in Source"
       WRITE(*,*) ErrorMessage
       STOP
   END SELECT

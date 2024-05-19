@@ -120,7 +120,7 @@ SELECT CASE (Reconstruction)
   CASE(3) ! WENO3
     nGhosts = 1
     nGPs    = 2
-  CASE(4) ! WENO5
+  CASE(4,5) ! WENO5 !*NB: In principle 3 nGPs would have bee ok but there were negative weights
     nGhosts = 2
     nGPs    = 4
   CASE DEFAULT

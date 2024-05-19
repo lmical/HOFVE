@@ -42,6 +42,7 @@ USE MOD_FiniteVolume2D_vars,ONLY: BoundaryConditionsType
 USE MOD_FiniteVolume2D_vars,ONLY: VarNameVisu
 USE MOD_FiniteVolume2D_vars,ONLY: GravitationalPotentialFlag
 USE MOD_FiniteVolume2D_vars,ONLY: maxTimeSteps
+USE MOD_FiniteVolume2D_vars,ONLY: LinearWeightsOnly
 #ifdef SW
 USE MOD_FiniteVolume2D_vars,ONLY: Gravity
 USE MOD_FiniteVolume2D_vars,ONLY: Kappa
@@ -132,6 +133,19 @@ SELECT CASE(InitialCondition)
     MESH_X1 = (/1.0,1.0/)
     BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
     GravitationalPotentialFlag = 0       
+  !*------------------------------------------
+  !*[5] Advection of smooth density sin4
+  !*------------------------------------------
+  CASE(5) 
+    NameTest="Advection of smooth density sin4"
+    TEnd    = 0.1 !*1.0 !*
+    Gmm     = 1.4
+    nElemsX = 120
+    nElemsY = nElemsX
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/1.0,1.0/)
+    BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
+    GravitationalPotentialFlag = 0       
 
   !*------------------------------------------
   !*[892] Smooth periodic IC with the purpose of verifying conservation
@@ -153,15 +167,13 @@ SELECT CASE(InitialCondition)
 END SELECT
 
 nargs = command_argument_COUNT()
-IF (nargs == 2) THEN
+IF (nargs > 1) THEN
    CALL get_command_ARGUMENT(2, arg)
    READ(arg, *) iarg
    nElemsX = iarg
-   nElemsY = nElemsX
-ELSE IF (nargs >2) THEN
-   CALL get_command_ARGUMENT(2, arg)
-   READ(arg, *) iarg
-   nElemsX = iarg
+END IF
+
+IF (nargs > 2) THEN
    CALL get_command_ARGUMENT(3, arg)
    READ(arg, *) iarg
    nElemsY = iarg
@@ -185,7 +197,7 @@ maxTimeSteps = 100000
 !* 1=First order FV
 !* 2=MUSCL
 !* 3=WENO3
-!* 4=WENO5
+!* 4,5=WENO5
 !*---------------------------------------------
 !* Different MINMOD limiters
 !* 20=2 = MUSCL
@@ -198,13 +210,15 @@ maxTimeSteps = 100000
 
 Reconstruction    = 4
 ReconstructionFix = Reconstruction
+LinearWeightsOnly = .FALSE.
 
 IF (nargs > 4) THEN
    CALL get_command_ARGUMENT(5, arg)
    READ(arg, *) iarg
    Reconstruction = iarg
-   Reconstruction = ReconstructionFix
+   ReconstructionFix = Reconstruction
 END IF
+
 
 !*---------------------------------------------
 !*TIME SCHEME LEGEND
@@ -247,6 +261,9 @@ PRINT*, "--------------------------"
 PRINT*, "Test              = ", InitialCondition, TRIM(NameTest)
 PRINT*, "Reconstruction    = ", Reconstruction
 PRINT*, "ReconstructionFix = ", ReconstructionFix
+IF (Reconstruction .GE. 3) THEN
+  PRINT*, "Linear Weights Only = ", LinearWeightsOnly
+END IF
 PRINT*, "Time Scheme       = ", timescheme
 SELECT CASE(WhichRiemannSolver)
   CASE(1)

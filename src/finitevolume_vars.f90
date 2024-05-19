@@ -106,6 +106,7 @@ INTEGER             :: JacobiCounter
 
 INTEGER             :: Reconstruction
 INTEGER             :: ReconstructionFix
+LOGICAL             :: LinearWeightsOnly
 INTEGER             :: timescheme 
 REAL,PARAMETER      :: wLobatto = 1./12.
 REAL,PARAMETER      :: WENOEPS = 1.0E-6
