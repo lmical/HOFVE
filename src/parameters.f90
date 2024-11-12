@@ -40,7 +40,7 @@ USE MOD_FiniteVolume2D_vars,ONLY: nOutputFiles
 USE MOD_FiniteVolume2D_vars,ONLY: InitialCondition
 USE MOD_FiniteVolume2D_vars,ONLY: BoundaryConditionsType
 USE MOD_FiniteVolume2D_vars,ONLY: VarNameVisu
-USE MOD_FiniteVolume2D_vars,ONLY: GravitationalPotentialFlag
+USE MOD_FiniteVolume2D_vars,ONLY: source_flag
 USE MOD_FiniteVolume2D_vars,ONLY: maxTimeSteps
 USE MOD_FiniteVolume2D_vars,ONLY: LinearWeightsOnly
 USE MOD_FiniteVolume2D_vars,ONLY: MStepsMax
@@ -93,8 +93,9 @@ SELECT CASE(InitialCondition)
     MESH_X0 = (/0.0,0.0/)
     MESH_X1 = (/3.0,3.0/)
     BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
-    GravitationalPotentialFlag = 0       
-#else
+    source_flag = 0       
+#endif
+#ifdef EqnEuler
   !*------------------------------------------
   !*[2] Steady isentropic smooth vortex
   !*------------------------------------------
@@ -107,7 +108,7 @@ SELECT CASE(InitialCondition)
     MESH_X0 = (/-10.0,-10.0/)
     MESH_X1 = (/10.0,10.0/)
     BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
-    GravitationalPotentialFlag = 0       
+    source_flag = 0       
   !*------------------------------------------
   !*[3] Unsteady isentropic smooth vortex
   !*------------------------------------------
@@ -120,7 +121,7 @@ SELECT CASE(InitialCondition)
     MESH_X0 = (/-10.0,-10.0/)
     MESH_X1 = (/10.0,10.0/)
     BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
-    GravitationalPotentialFlag = 0       
+    source_flag = 0       
   !*------------------------------------------
   !*[4] Advection of smooth density
   !*------------------------------------------
@@ -133,7 +134,7 @@ SELECT CASE(InitialCondition)
     MESH_X0 = (/0.0,0.0/)
     MESH_X1 = (/1.0,1.0/)
     BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
-    GravitationalPotentialFlag = 0       
+    source_flag = 0       
   !*------------------------------------------
   !*[5] Advection of smooth density sin4
   !*------------------------------------------
@@ -146,7 +147,7 @@ SELECT CASE(InitialCondition)
     MESH_X0 = (/0.0,0.0/)
     MESH_X1 = (/1.0,1.0/)
     BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
-    GravitationalPotentialFlag = 0       
+    source_flag = 0       
 
   !*------------------------------------------
   !*[892] Smooth periodic IC with the purpose of verifying conservation
@@ -159,7 +160,10 @@ SELECT CASE(InitialCondition)
     MESH_X0 = (/0.0,0.0/)
     MESH_X1 = (/1.0,1.0/)
     BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
-    GravitationalPotentialFlag = 0       
+    source_flag = 0       
+#endif
+#ifdef EqnAcoustics
+
 #endif
   CASE DEFAULT
     ErrorMessage = "Initial condition not implemented"

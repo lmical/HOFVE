@@ -79,8 +79,10 @@ USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState1
 USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState2
 USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState3
 USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState4
-USE MOD_FiniteVolume2D_vars,ONLY: MIN_DENSITY
+USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR
+#ifdef EqnEuler
 USE MOD_FiniteVolume2D_vars,ONLY: Gmm
+#endif
 #ifdef SW
 USE MOD_FiniteVolume2D_vars,ONLY: Gravity
 USE MOD_FiniteVolume2D_vars,ONLY: Kappa
@@ -143,7 +145,8 @@ SELECT CASE(WhichInitialCondition)
     Prim(4)= Kappa*Prim(1)**Gmm
 
     CALL PrimToCons(Prim,Cons)
-#else
+#endif
+#ifdef EqnEuler
   !*------------------------------------------
   !*[2] Steady isentropic vortex
   !*------------------------------------------
@@ -262,6 +265,8 @@ SELECT CASE(WhichInitialCondition)
     CALL PrimToCons(Prim,Cons)
 
 #endif
+#ifdef EqnAcoustics
+#endif
   CASE DEFAULT
     ErrorMessage = "Exact function not specified"
     WRITE(*,*) ErrorMessage
@@ -271,7 +276,7 @@ END SELECT
 !-------------------------------------------------------------------------------!
 CONTAINS
    
-#ifdef SW
+#if defined (SW) || defined (EqnShallowWater)
   REAL FUNCTION hSmoothAuxiliary(x)
     IMPLICIT NONE
     REAL, INTENT(IN) :: x
@@ -299,7 +304,7 @@ SUBROUTINE ExactFunctionWB(WhichInitialCondition,x,Cons)
 USE MOD_FiniteVolume2D_vars,ONLY: nVar
 USE MOD_FiniteVolume2D_vars,ONLY: nDims
 USE MOD_FiniteVolume2D_vars,ONLY: PI 
-USE MOD_FiniteVolume2D_vars,ONLY: MIN_DENSITY
+USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -352,7 +357,7 @@ USE MOD_FiniteVolume2D_vars,ONLY: MESH_DX
 USE MOD_FiniteVolume2D_vars,ONLY: U
 USE MOD_FiniteVolume2D_vars,ONLY: V
 USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
-USE MOD_FiniteVolume2D_vars,ONLY: GravitationalPotentialFlag
+USE MOD_FiniteVolume2D_vars,ONLY: source_flag
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -373,7 +378,7 @@ S = 0.0 ! S(1:nVar,nElemsX,nElemsY)
 
 !int_{iixjj} S(1:nVar,ii,jj) dxdy
 
-IF (GravitationalPotentialFlag .GT. 0) THEN
+IF (source_flag .GT. 0) THEN
   SELECT CASE (Reconstruction)
     CASE(1,2,20,21,22,23,24,25)
       DO jj=1,nElemsY
@@ -475,10 +480,22 @@ REAL, DIMENSION(1:nVar), INTENT(IN)  :: Q
 REAL, DIMENSION(1:nDims) , INTENT(IN)  :: X
 REAL, DIMENSION(1:nVar) :: S 
 
+#ifdef EqnEuler
 S(1) = 0.
 S(2) = -Q(1)*Gravitational_Potential_X(X) 
 S(3) = -Q(1)*Gravitational_Potential_Y(X) 
 S(4) = -(Q(2)*Gravitational_Potential_X(X)+Q(3)*Gravitational_Potential_Y(X))
+#endif
+#ifdef EqnShallowWater
+S(1) = 0.
+S(2) = 0. ! -Q(1)*Bathymetry_X(X) 
+S(3) = 0. ! -Q(1)*Bathymetry_Y(X) 
+#endif
+#ifdef EqnAcoustics
+S(1) = 0. ! mass source
+S(2) = 0. ! coriolis, friction 
+S(3) = 0. ! coriolis, friction 
+#endif
 
 !-------------------------------------------------------------------------------!
 END FUNCTION SourceFunc
@@ -486,17 +503,18 @@ END FUNCTION SourceFunc
 !
 !
 !
+#ifdef EqnEuler
 !===============================================================================!
 REAL FUNCTION Gravitational_Potential(X)
 !-------------------------------------------------------------------------------!
 USE MOD_FiniteVolume2D_vars,ONLY: nDims
 USE MOD_FiniteVolume2D_vars,ONLY: PI   
-USE MOD_FiniteVolume2D_vars,ONLY: GravitationalPotentialFlag   
+USE MOD_FiniteVolume2D_vars,ONLY: source_flag   
 IMPLICIT NONE
 REAL, DIMENSION(1:nDims) , INTENT(IN)  :: X
 REAL                            :: r2
 
-SELECT CASE (GravitationalPotentialFlag)
+SELECT CASE (source_flag)
 
   CASE DEFAULT
    Gravitational_Potential = 0.
@@ -513,12 +531,12 @@ REAL FUNCTION Gravitational_Potential_X(X)
 !-------------------------------------------------------------------------------!
 USE MOD_FiniteVolume2D_vars,ONLY: nDims
 USE MOD_FiniteVolume2D_vars,ONLY: PI   
-USE MOD_FiniteVolume2D_vars,ONLY: GravitationalPotentialFlag   
+USE MOD_FiniteVolume2D_vars,ONLY: source_flag   
 IMPLICIT NONE
 REAL, DIMENSION(1:nDims) , INTENT(IN)  :: X
 REAL                            :: r2
 
-SELECT CASE (GravitationalPotentialFlag)
+SELECT CASE (source_flag)
 
   CASE DEFAULT
    Gravitational_Potential_X = 0.
@@ -535,12 +553,12 @@ REAL FUNCTION Gravitational_Potential_Y(X)
 !-------------------------------------------------------------------------------!
 USE MOD_FiniteVolume2D_vars,ONLY: nDims
 USE MOD_FiniteVolume2D_vars,ONLY: PI   
-USE MOD_FiniteVolume2D_vars,ONLY: GravitationalPotentialFlag   
+USE MOD_FiniteVolume2D_vars,ONLY: source_flag   
 IMPLICIT NONE
 REAL, DIMENSION(1:nDims) , INTENT(IN)  :: X
 REAL                            :: r2
 
-SELECT CASE (GravitationalPotentialFlag)
+SELECT CASE (source_flag)
 
   CASE DEFAULT
    Gravitational_Potential_Y = 0.
@@ -549,6 +567,14 @@ END SELECT
 !-------------------------------------------------------------------------------!
 END FUNCTION Gravitational_Potential_Y
 !===============================================================================!
+#endif
+!
+#ifdef EqnShallowWater
+! Definition of bathymetry and derivatives
+#endif
+#ifdef EqnAcoustics
+! Definition of coriolis, friction etc
+#endif
 !
 !
 !
@@ -587,8 +613,10 @@ REAL               :: ConsRefState1(1:nVar), ConsRefState2(1:nVar)
 CHARACTER(LEN=255) :: ErrorMessage
 !-------------------------------------------------------------------------------!
 
+#if defined(EqnEuler) || defined(EqnShallowWater) || defined(EqnAcoustics)
 idx_vx = 2
 idx_vy = 3
+#endif
 
 !------------------------------!
 ! Left Boundary Conditions     !
@@ -864,9 +892,9 @@ DO jj=1,nElemsY
     CALL WaveSpeeds2D(Prim(1:nVar),FastestWaveX,FastestWaveY)
     LambdaMaxX = MAX(LambdaMaxX,ABS(FastestWaveX))
     LambdaMaxY = MAX(LambdaMaxY,ABS(FastestWaveY))
-    TimeStep  = MIN(TimeStep,MESH_DX(1)/LambdaMaxX,MESH_DX(2)/LambdaMaxY)
   END DO
 END DO
+TimeStep  = MIN(TimeStep,MESH_DX(1)/LambdaMaxX,MESH_DX(2)/LambdaMaxY)
 
 TimeStep = CFL*TimeStep
 
@@ -884,7 +912,12 @@ END FUNCTION TimeStep
 SUBROUTINE WaveSpeeds1D(Prim,slowest,fastest)
 !-------------------------------------------------------------------------------!
 USE MOD_FiniteVolume2D_vars,ONLY: nVar
+#ifdef EqnShallowWater
+USE MOD_FiniteVolume2D_vars,ONLY: Gravity
+#endif
+#ifdef EqnEuler
 USE MOD_FiniteVolume2D_vars,ONLY: Gmm
+#endif
 #ifdef SW
 USE MOD_FiniteVolume2D_vars,ONLY: Kappa
 #endif
@@ -899,24 +932,55 @@ REAL,INTENT(OUT),OPTIONAL :: fastest
 !-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
-REAL                      :: ro, vx, vy, p
+
+#ifdef EqnEuler
+!-------------------------------------------------------------------------------!
+REAL                      :: ro, vdir, p
 !-------------------------------------------------------------------------------!
 
 ro = Prim(1)
-vx = Prim(2)
-vy = Prim(3)
+vdir = Prim(2)
 p  = Prim(4)
 #ifdef SW
 p  = Kappa*ro**Gmm
 #endif
 
 IF(PRESENT(slowest)) THEN
-  slowest = ABS(vx) - SQRT(Gmm*p/ro)
+  slowest = ABS(vdir) - SQRT(Gmm*p/ro)
 END IF
 
 IF(PRESENT(fastest)) THEN
-  fastest = ABS(vx) + SQRT(Gmm*p/ro)
+  fastest = ABS(vdir) + SQRT(Gmm*p/ro)
 END IF
+#endif
+
+#ifdef EqnShallowWater
+!-------------------------------------------------------------------------------!
+REAL                      :: h, vdir
+!-------------------------------------------------------------------------------!
+
+h = Prim(1)
+vdir = Prim(2)
+
+IF(PRESENT(slowest)) THEN
+  slowest = ABS(vdir) - SQRT(Gravity*h)
+END IF
+
+IF(PRESENT(fastest)) THEN
+  fastest = ABS(vdir) + SQRT(Gravity*h)
+END IF
+#endif
+
+#ifdef EqnAcoustics
+
+IF(PRESENT(slowest)) THEN
+  slowest=1.
+END IF
+IF(PRESENT(fastest)) THEN
+  fastest = 1.
+END IF
+#endif
+
 
 !-------------------------------------------------------------------------------!
 END SUBROUTINE WaveSpeeds1D
@@ -928,7 +992,12 @@ END SUBROUTINE WaveSpeeds1D
 SUBROUTINE WaveSpeeds2D(Prim,fastestx,fastesty)
 !-------------------------------------------------------------------------------!
 USE MOD_FiniteVolume2D_vars,ONLY: nVar
+#ifdef EqnShallowWater
+USE MOD_FiniteVolume2D_vars,ONLY: Gravity
+#endif
+#ifdef EqnEuler
 USE MOD_FiniteVolume2D_vars,ONLY: Gmm
+#endif
 #ifdef SW
 USE MOD_FiniteVolume2D_vars,ONLY: Kappa
 #endif
@@ -941,11 +1010,15 @@ REAL,INTENT(IN)  :: Prim(1:nVar)
 REAL,INTENT(OUT) :: fastestx
 REAL,INTENT(OUT) :: fastesty
 !-------------------------------------------------------------------------------!
+
+
+#ifdef EqnEuler
+
+!-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
-REAL             :: ro, vx, vy, p
+REAL                      :: ro, vx, vy, p
 !-------------------------------------------------------------------------------!
-
 ro = Prim(1)
 vx = Prim(2)
 vy = Prim(3)
@@ -956,6 +1029,26 @@ p  = Kappa*ro**Gmm
 
 fastestx = ABS(vx) + SQRT(Gmm*p/ro)
 fastesty = ABS(vy) + SQRT(Gmm*p/ro)
+#endif
+
+#ifdef EqnShallowWater
+!-------------------------------------------------------------------------------!
+! >> LOCAL VARIABLES                                                            !
+!-------------------------------------------------------------------------------!
+REAL             ::h, vx, vy
+!-------------------------------------------------------------------------------!
+h  = Prim(1)
+vx = Prim(2)
+vy = Prim(3)
+
+fastestx = ABS(vx) + SQRT(Gravity*h)
+fastesty = ABS(vy) + SQRT(Gravity*h)
+#endif
+
+#ifdef EqnAcoustics
+fastestx = 1. 
+fastesty = 1.
+#endif
 
 !-------------------------------------------------------------------------------!
 END SUBROUTINE WaveSpeeds2D
@@ -967,8 +1060,11 @@ END SUBROUTINE WaveSpeeds2D
 SUBROUTINE ConsToPrim(Cons, Prim)
 !-------------------------------------------------------------------------------!
 USE MOD_FiniteVolume2D_vars,ONLY: nVar
+USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR, MIN_SPEED
+
+#ifdef EqnEuler
 USE MOD_FiniteVolume2D_vars,ONLY: Gmm
-USE MOD_FiniteVolume2D_vars,ONLY: MIN_DENSITY, MIN_SPEED
+#endif
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -976,6 +1072,8 @@ IMPLICIT NONE
 !-------------------------------------------------------------------------------!
 REAL,INTENT(IN)  :: Cons(1:nVar)
 REAL,INTENT(OUT) :: Prim(1:nVar)
+
+#ifdef EqnEuler
 !-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
@@ -989,16 +1087,15 @@ Energy = Cons(4)
 
 
 #ifdef PATANKAR
-rot = ro + MIN_DENSITY/ro
+rot = ro + MIN_POSITIVE_VAR/ro
 #else
 
-IF (ro .LT. MIN_DENSITY) THEN
-  ro = MIN_DENSITY
+IF (ro .LT. MIN_POSITIVE_VAR) THEN
+  rot = MIN_POSITIVE_VAR
   rovx = 0.
   rovy = 0.
 END IF
 
-rot = ro
 
 #endif
 
@@ -1007,6 +1104,43 @@ Prim(1) = ro
 Prim(2) = rovx/rot
 Prim(3) = rovy/rot
 Prim(4) = (Gmm-1.0)*( Energy-0.5*ro*(Prim(2)**2+Prim(3)**2) )
+
+#endif
+
+
+
+#ifdef EqnShallowWater
+!-------------------------------------------------------------------------------!
+! >> LOCAL VARIABLES                                                            !
+!-------------------------------------------------------------------------------!
+REAL             :: h, qx, qy, ht
+!-------------------------------------------------------------------------------!
+
+h     = Cons(1)
+qx    = Cons(2)
+qy    = Cons(3)
+
+#ifdef PATANKAR
+ht = h + MIN_POSITIVE_VAR/h
+#else
+
+IF (h .LT. MIN_POSITIVE_VAR) THEN
+  ht = MIN_POSITIVE_VAR
+  qx = 0.
+  qy = 0.
+END IF
+
+#endif
+
+
+Prim(1) = h
+Prim(2) = qx/ht
+Prim(3) = qy/ht
+
+#endif
+#ifdef EqnAcoustics
+Prim(1:nVar) = Cons(1:nVar)
+#endif
 
 !-------------------------------------------------------------------------------!
 END SUBROUTINE ConsToPrim
@@ -1018,8 +1152,11 @@ END SUBROUTINE ConsToPrim
 SUBROUTINE PrimToCons(Prim, Cons)
 !-------------------------------------------------------------------------------!
 USE MOD_FiniteVolume2D_vars,ONLY: nVar
+USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR, MIN_SPEED
+
+#ifdef EqnEuler
 USE MOD_FiniteVolume2D_vars,ONLY: Gmm
-USE MOD_FiniteVolume2D_vars,ONLY: MIN_DENSITY, MIN_SPEED
+#endif
 #ifdef SW
 USE MOD_FiniteVolume2D_vars,ONLY: Kappa
 #endif
@@ -1030,6 +1167,8 @@ IMPLICIT NONE
 !-------------------------------------------------------------------------------!
 REAL,INTENT(IN)  :: Prim(1:nVar)
 REAL,INTENT(OUT) :: Cons(1:nVar)
+
+#ifdef EqnEuler
 !-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
@@ -1047,8 +1186,8 @@ p   = Kappa*ro**Gmm
 #ifdef PATANKAR
 
 #else
-IF (ro .LT. MIN_DENSITY) THEN
- ro = MIN_DENSITY
+IF (ro .LT. MIN_POSITIVE_VAR) THEN
+ ro = MIN_POSITIVE_VAR
  vx=0.
  vy=0.
 END IF
@@ -1058,6 +1197,37 @@ Cons(1) = ro
 Cons(2) = ro*vx
 Cons(3) = ro*vy
 Cons(4) = p/(Gmm-1.0)+0.5*ro*(vx**2+vy**2)
+#endif
+
+#ifdef EqnShallowWater
+!-------------------------------------------------------------------------------!
+! >> LOCAL VARIABLES                                                            !
+!-------------------------------------------------------------------------------!
+REAL             :: h, vx, vy
+!-------------------------------------------------------------------------------!
+
+h   = Prim(1)
+vx  = Prim(2)
+vy  = Prim(3)
+
+#ifdef PATANKAR
+
+#else
+IF (h .LT. MIN_POSITIVE_VAR) THEN
+ h  = MIN_POSITIVE_VAR
+ vx=0.
+ vy=0.
+END IF
+#endif
+
+Cons(1) = h
+Cons(2) = h*vx
+Cons(3) = h*vy
+#endif
+
+#ifdef EqnAcoustics
+Cons(1:nVar)=Prim(1:nVar)
+#endif
 
 !-------------------------------------------------------------------------------!
 END SUBROUTINE PrimToCons
@@ -1069,10 +1239,15 @@ END SUBROUTINE PrimToCons
 SUBROUTINE EvaluateFlux1D(Prim,Flux)
 !-------------------------------------------------------------------------------!
 USE MOD_FiniteVolume2D_vars,ONLY: nVar
+USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR, MIN_SPEED
+#ifdef EqnEuler
 USE MOD_FiniteVolume2D_vars,ONLY: Gmm
-USE MOD_FiniteVolume2D_vars,ONLY: MIN_DENSITY, MIN_SPEED
+#endif
 #ifdef SW
 USE MOD_FiniteVolume2D_vars,ONLY: Kappa
+#endif
+#ifdef EqnShallowWater
+USE MOD_FiniteVolume2D_vars,ONLY: Gravity
 #endif
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
@@ -1081,6 +1256,8 @@ IMPLICIT NONE
 !-------------------------------------------------------------------------------!
 REAL,INTENT(IN)  :: Prim(1:nVar)
 REAL,INTENT(OUT) :: Flux(1:nVar)
+
+#ifdef EqnEuler
 !-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
@@ -1098,8 +1275,8 @@ p  = Kappa*ro**Gmm
 #ifdef PATANKAR
 
 #else
-IF (ro .LT. MIN_DENSITY) THEN
- ro = MIN_DENSITY
+IF (ro .LT. MIN_POSITIVE_VAR) THEN
+ ro = MIN_POSITIVE_VAR
  vx=0.
  vy=0.
 END IF
@@ -1114,6 +1291,49 @@ Flux(4) = vx*(Energy+p)
 !*NB: Reference:
 !*Eleuterio F. Toro, Riemann Solvers and Numerical Methods for Fluid Dynamics - A Practical Introduction
 !*3.2.4 The Split Three–Dimensional Riemann Problem
+#endif
+
+#ifdef EqnShallowWater
+!-------------------------------------------------------------------------------!
+! >> LOCAL VARIABLES                                                            !
+!-------------------------------------------------------------------------------!
+REAL             :: h, vx, vy
+!-------------------------------------------------------------------------------!
+
+h  = Prim(1)
+vx = Prim(2)
+vy = Prim(3)
+
+#ifdef PATANKAR
+
+#else
+IF (h .LT. MIN_POSITIVE_VAR) THEN
+ h  = MIN_POSITIVE_VAR
+ vx=0.
+ vy=0.
+END IF
+#endif
+
+Flux(1) = h*vx
+Flux(2) = h*vx**2 + 0.5d0*Gravity*h**2
+Flux(3) = h*vx*vy
+#endif
+
+#ifdef EqnAcoustics
+!-------------------------------------------------------------------------------!
+! >> LOCAL VARIABLES                                                            !
+!-------------------------------------------------------------------------------!
+REAL             :: p, vx, vy
+!-------------------------------------------------------------------------------!
+
+p  = Prim(1)
+vx = Prim(2)
+vy = Prim(3)
+
+Flux(1) = vx
+Flux(2) = p
+Flux(3) = 0.
+#endif
 
 !-------------------------------------------------------------------------------!
 END SUBROUTINE EvaluateFlux1D
@@ -1187,7 +1407,8 @@ DO iGP=1,nGPs
       CALL RiemannSolverByRusanov(&
         ConsLL(1:nVar,iGP),ConsRR(1:nVar,iGP),&
         PrimLL(1:nVar,iGP),PrimRR(1:nVar,iGP),Flux(1:nVar,iGP))
-    CASE(2) !*Exact
+#ifdef EqnEuler    
+      CASE(2) !*Exact
         al=SQRT(Gmm*PrimLL(4,iGP)/PrimLL(1,iGP)) !*sound_ro_e_scal(ul(1),ul(2+ndim),eos)
         ar=SQRT(Gmm*PrimRR(4,iGP)/PrimRR(1,iGP)) !*sound_ro_e_scal(ur(1),ur(2+ndim),eos)
         pl=PrimLL(4,iGP) !*pres_ro_e_scal (ul(1),ul(2+ndim),eos)
@@ -1227,7 +1448,7 @@ DO iGP=1,nGPs
         ! vstar: ici rho, u,v,eint,p
 
         CALL EvaluateFlux1D(w,Flux(1:nVar,iGP))
-
+#endif
     CASE DEFAULT
       PRINT*, "Riemann Solver not defined"
       PRINT*, "Riemann Solver was", WhichRiemannSolver

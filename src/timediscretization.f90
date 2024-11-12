@@ -1437,14 +1437,14 @@ END SUBROUTINE MODIFIED_PATANKAR_MATRIX_INVERSION
 !
 !===============================================================================!
 REAL FUNCTION  PATANKAR_DIV( prod , h )
-USE MOD_FiniteVolume2D_vars,ONLY: MIN_DENSITY
+USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR
 IMPLICIT NONE 
 REAL, INTENT(IN) :: prod, h
 
-IF ( h .LT. MIN_DENSITY ) THEN
+IF ( h .LT. MIN_POSITIVE_VAR ) THEN
   PATANKAR_DIV = 0.
 ELSE
-  PATANKAR_DIV = 2. * h * prod / ( h*h + MAX( h*h , MIN_DENSITY ) )
+  PATANKAR_DIV = 2. * h * prod / ( h*h + MAX( h*h , MIN_POSITIVE_VAR ) )
 ENDIF
 
 END  FUNCTION  PATANKAR_DIV 

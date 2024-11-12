@@ -7,7 +7,13 @@ PUBLIC
 !-------------------------------------------------------------------------------!
 ! >> GLOBAL VARIABLES                                                           !
 !-------------------------------------------------------------------------------!
+#ifdef EqnEuler
 INTEGER,PARAMETER   :: nVar  = 4
+#endif
+#if defined (EqnAcoustics) || defined (EqnShallowWater)
+INTEGER,PARAMETER   :: nVar  = 3
+#endif
+
 INTEGER,PARAMETER   :: nDims = 2
 REAL                :: MESH_SX(1:nDims)
 REAL                :: MESH_X0(1:nDims)
@@ -86,13 +92,22 @@ REAL                :: dt
 REAL                :: dt_Analyze
 REAL                :: CFL
 REAL                :: tEnd
-REAL                :: Gmm
+
 REAL                :: LambdaMaxX
 REAL                :: LambdaMaxY
-INTEGER             :: GravitationalPotentialFlag
+
+INTEGER             :: source_flag
+
+#ifdef EqnEuler
+REAL                :: Gmm
+#endif
 #ifdef SW
 REAL                :: Gravity
 REAL                :: Kappa
+#endif
+
+#ifdef EqnShallowWater
+REAL                :: Gravity
 #endif
 
 INTEGER             :: maxTimeSteps
@@ -117,7 +132,7 @@ INTEGER,PARAMETER   :: WENOEXP = 2.0
 REAL,PARAMETER      :: PI           = ACOS(-1.0)
 REAL,PARAMETER      :: EPS          = 1.0E-6
 REAL,PARAMETER      :: ACCURACY     = 1.0E-30
-REAL,PARAMETER      :: MIN_DENSITY    = 1.0E-6
+REAL,PARAMETER      :: MIN_POSITIVE_VAR    = 1.0E-6
 REAL,PARAMETER      :: MIN_SPEED    = 0.0
 REAL,PARAMETER      :: MIN_TIMESTEP = 1.0E-30
 

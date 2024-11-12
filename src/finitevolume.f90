@@ -130,13 +130,13 @@ SELECT CASE (Reconstruction)
   CASE(9) ! WENO9
     nGhosts = 4
     nGPs    = 8  !*NB: In principle 5 and 6 and 7 and 8 nGPs would have been ok but there were negative weights
-    PRINT*, "I did not find a number of points without noegative quadrature weights for WENO9"
+    PRINT*, "I did not find a number of points without negative quadrature weights for WENO9"
     PRINT*, "I tested until 8"
     STOP
   CASE(11) ! WENO11
     nGhosts = 5
     nGPs    = 7  !*NB: In principle 6 and 7 and 8 nGPs would have been ok but there were negative weights
-    PRINT*, "I did not find a number of points without noegative quadrature weights for WENO11"
+    PRINT*, "I did not find a number of points without negative quadrature weights for WENO11"
     PRINT*, "I tested until 8"
     STOP
   CASE(13) ! WENO13
@@ -172,19 +172,19 @@ ALLOCATE(FluxY(1:nVar,1:nGPs,1:nElemsX,0:nElemsY))
 ALLOCATE(Ind(1:2,0:nElemsX+1,0:nElemsY+1))
 
 ALLOCATE(UN0(1:nVar,1:nElemsX,1:nElemsY))
-ALLOCATE(K0(1:nVar,1:nElemsX,1:nElemsY))
-ALLOCATE(K1(1:nVar,1:nElemsX,1:nElemsY))
-ALLOCATE(K2(1:nVar,1:nElemsX,1:nElemsY))
-ALLOCATE(K3(1:nVar,1:nElemsX,1:nElemsY))
-ALLOCATE(K4(1:nVar,1:nElemsX,1:nElemsY))
-ALLOCATE(K5(1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE( K0(1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE( K1(1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE( K2(1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE( K3(1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE( K4(1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE( K5(1:nVar,1:nElemsX,1:nElemsY))
 
-ALLOCATE(Ua(1:MStepsMax,1:nVar,1:nElemsX,1:nElemsY))
-ALLOCATE(Up(1:MStepsMax,1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE( Ua(1:MStepsMax,1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE( Up(1:MStepsMax,1:nVar,1:nElemsX,1:nElemsY))
 ALLOCATE(FUp(1:MStepsMax,1:nVar,1:nElemsX,1:nElemsY))
 
 #ifdef WELLBALANCED
-ALLOCATE( UtWB(1:nVar,1:nElemsX,1:nElemsY))
+ALLOCATE(UtWB(1:nVar,1:nElemsX,1:nElemsY))
 ALLOCATE( SWB(1:nVar,1:nElemsX,1:nElemsY))
 ALLOCATE(FXWB(1:nVar,0:nElemsX,1:nElemsY))
 ALLOCATE(FYWB(1:nVar,1:nElemsX,0:nElemsY))
@@ -306,9 +306,7 @@ SUBROUTINE FillInitialConditions()
 !-------------------------------------------------------------------------------!
 USE MOD_Equation,           ONLY: ConsToPrim
 USE MOD_Equation,           ONLY: ExactFunction
-USE MOD_Equation,           ONLY: Gravitational_Potential   
 USE MOD_FiniteVolume2D_vars,ONLY: U
-USE MOD_FiniteVolume2D_vars,ONLY: Gravitational_Potential_Averages
 USE MOD_FiniteVolume2D_vars,ONLY: V
 USE MOD_FiniteVolume2D_vars,ONLY: nVar
 USE MOD_FiniteVolume2D_vars,ONLY: nDims
@@ -319,6 +317,10 @@ USE MOD_FiniteVolume2D_vars,ONLY: InitialCondition
 USE MOD_FiniteVolume2D_vars,ONLY: nGPs
 USE MOD_FiniteVolume2D_vars,ONLY: MeshGP
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGP
+#ifdef EqnEuler
+USE MOD_Equation,           ONLY: Gravitational_Potential   
+USE MOD_FiniteVolume2D_vars,ONLY: Gravitational_Potential_Averages
+#endif
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -344,9 +346,11 @@ DO jj=1,nElemsY
           InitialCondition,0.0,MeshGP(:,ii,jj,iGP,jGP),Utemp(1:nVar,iGP,jGP))
         U(1:nVar, ii, jj) = U(1:nVar, ii, jj) + WeightsGP(iGP,jGP) * Utemp(1:nVar,iGP,jGP)
 
+#ifdef EqnEuler
         ! compute cell average of bathymetry            
         GravPottemp(iGP,jGP) = Gravitational_Potential(MeshGP(:,ii,jj,iGP,jGP))
         Gravitational_Potential_Averages(ii,jj)    = Gravitational_Potential_Averages(ii,jj) + WeightsGP(iGP,jGP) * GravPottemp(iGP,jGP)
+#endif
       END DO
     END DO
     CALL ConsToPrim(U(1:nVar,ii,jj),V(1:nVar,ii,jj))
@@ -681,35 +685,38 @@ USE MOD_FiniteVolume2D_vars,ONLY: WP
 USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGPBnd
 USE MOD_FiniteVolume2D_vars,ONLY: wLobatto    
-USE MOD_FiniteVolume2D_vars,ONLY: MIN_DENSITY   
+USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR   
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
-INTEGER :: ii, jj, jGP
+INTEGER :: ii, jj, jGP, idx_pos
 REAL    :: alpha, beta, csiX, theta, mmin 
 !-------------------------------------------------------------------------------!
 
+#if defined(EqnEuler) || defined(EqnShallowWater) || defined(EqnAcoustics)
+idx_pos = 1
+#endif
 
 DO jj=1,nElemsY
   DO ii=0,nElemsX+1
      alpha = 0.  
      beta  = 0.
      DO jGP = 1,nGPs
-        alpha = alpha + WeightsGPBnd(jGP)*WM(1,jGP,ii+0,jj) 
-        beta  = beta  + WeightsGPBnd(jGP)*WP(1,jGP,ii+0,jj)
+        alpha = alpha + WeightsGPBnd(jGP)*WM(idx_pos,jGP,ii+0,jj) 
+        beta  = beta  + WeightsGPBnd(jGP)*WP(idx_pos,jGP,ii+0,jj)
      END DO
-     csiX = ( U(1,ii,jj) - wLobatto*alpha - wLobatto*beta )/( 1. - 2.*wLobatto ) 
+     csiX = ( U(idx_pos,ii,jj) - wLobatto*alpha - wLobatto*beta )/( 1. - 2.*wLobatto ) 
      DO jGP = 1,nGPs
-        mmin = MIN( csiX , WM(1,jGP,ii+0,jj), WP(1,jGP,ii+0,jj))
-        IF ( U(1,ii,jj) .EQ. mmin ) THEN
+        mmin = MIN( csiX , WM(idx_pos,jGP,ii+0,jj), WP(idx_pos,jGP,ii+0,jj))
+        IF ( U(idx_pos,ii,jj) .EQ. mmin ) THEN
           theta = 1. 
         ELSE
-          theta = MIN( 1. , ABS( (U(1,ii,jj)-MIN_DENSITY)/(U(1,ii,jj)-mmin) ) )
+          theta = MIN( 1. , ABS( (U(idx_pos,ii,jj)-MIN_POSITIVE_VAR)/(U(idx_pos,ii,jj)-mmin) ) )
         ENDIF
-        WP(1,jGP,ii+0,jj) = U(1,ii,jj) + theta * ( WP(1,jGP,ii+0,jj) - U(1,ii,jj) ) 
-        WM(1,jGP,ii+0,jj) = U(1,ii,jj) + theta * ( WM(1,jGP,ii+0,jj) - U(1,ii,jj) )
+        WP(idx_pos,jGP,ii+0,jj) = U(idx_pos,ii,jj) + theta * ( WP(idx_pos,jGP,ii+0,jj) - U(idx_pos,ii,jj) ) 
+        WM(idx_pos,jGP,ii+0,jj) = U(idx_pos,ii,jj) + theta * ( WM(idx_pos,jGP,ii+0,jj) - U(idx_pos,ii,jj) )
      END DO
   END DO
 END DO
@@ -739,14 +746,18 @@ USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
 USE MOD_FiniteVolume2D_vars,ONLY: NormVectY, TangVectY
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGPBnd
 USE MOD_FiniteVolume2D_vars,ONLY: wLobatto    
-USE MOD_FiniteVolume2D_vars,ONLY: MIN_DENSITY   
+USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR   
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
-INTEGER :: ii, jj, jGP
-REAL    :: alpha, beta, csiY, theta, mmin 
+INTEGER :: ii, jj, jGP, idy_pos
+REAL    :: alpha, beta, csiY, theta, mmin
+
+#if defined(EqnEuler) || defined(EqnShallowWater) || defined(EqnAcoustics)
+idy_pos = 1
+#endif
 !-------------------------------------------------------------------------------!
 
 
@@ -755,19 +766,19 @@ DO jj=0,nElemsY+1
      alpha = 0.  
      beta  = 0.
      DO jGP = 1,nGPs
-        alpha = alpha + WeightsGPBnd(jGP)*WM(1,jGP,ii,jj+0) 
-        beta  = beta  + WeightsGPBnd(jGP)*WP(1,jGP,ii,jj+0)
+        alpha = alpha + WeightsGPBnd(jGP)*WM(idy_pos,jGP,ii,jj+0) 
+        beta  = beta  + WeightsGPBnd(jGP)*WP(idy_pos,jGP,ii,jj+0)
      END DO
-     csiY = ( U(1,ii,jj) - wLobatto*alpha - wLobatto*beta )/( 1. - 2.*wLobatto ) 
+     csiY = ( U(idy_pos,ii,jj) - wLobatto*alpha - wLobatto*beta )/( 1. - 2.*wLobatto ) 
      DO jGP = 1,nGPs
-        mmin = MIN( csiY , WM(1,jGP,ii,jj+0), WP(1,jGP,ii,jj+0))
-        IF ( U(1,ii,jj) .EQ. mmin ) THEN
+        mmin = MIN( csiY , WM(idy_pos,jGP,ii,jj+0), WP(idy_pos,jGP,ii,jj+0))
+        IF ( U(idy_pos,ii,jj) .EQ. mmin ) THEN
           theta = 1. 
         ELSE
-          theta = MIN( 1. , ABS( (U(1,ii,jj)-MIN_DENSITY)/(U(1,ii,jj)-mmin) ) )
+          theta = MIN( 1. , ABS( (U(idy_pos,ii,jj)-MIN_POSITIVE_VAR)/(U(idy_pos,ii,jj)-mmin) ) )
         ENDIF
-        WP(1,jGP,ii,jj+0) = U(1,ii,jj) + theta * ( WP(1,jGP,ii,jj+0) - U(1,ii,jj) ) 
-        WM(1,jGP,ii,jj+0) = U(1,ii,jj) + theta * ( WM(1,jGP,ii,jj+0) - U(1,ii,jj) )
+        WP(idy_pos,jGP,ii,jj+0) = U(idy_pos,ii,jj) + theta * ( WP(idy_pos,jGP,ii,jj+0) - U(idy_pos,ii,jj) ) 
+        WM(idy_pos,jGP,ii,jj+0) = U(idy_pos,ii,jj) + theta * ( WM(idy_pos,jGP,ii,jj+0) - U(idy_pos,ii,jj) )
      END DO
   END DO
 END DO
@@ -818,7 +829,9 @@ USE MOD_FiniteVolume2D_vars,ONLY: K5
 USE MOD_FiniteVolume2D_vars,ONLY: Ua
 USE MOD_FiniteVolume2D_vars,ONLY: Up
 USE MOD_FiniteVolume2D_vars,ONLY: FUp
+#ifdef EqnEuler
 USE MOD_FiniteVolume2D_vars,ONLY: Gravitational_Potential_Averages
+#endif
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGP
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGPBnd
 
@@ -851,7 +864,6 @@ DEALLOCATE(TangVectX)
 DEALLOCATE(NormVectY)
 DEALLOCATE(TangVectY)
 DEALLOCATE(U)
-DEALLOCATE(Gravitational_Potential_Averages)
 DEALLOCATE(V)
 DEALLOCATE(Ut)
 DEALLOCATE(WM)
@@ -869,6 +881,10 @@ DEALLOCATE(K3)
 DEALLOCATE(K4)
 DEALLOCATE(K5)
     
+#ifdef EqnEuler
+DEALLOCATE(Gravitational_Potential_Averages)
+#endif
+
 DEALLOCATE(Ua)
 DEALLOCATE(Up)
 DEALLOCATE(FUp)
