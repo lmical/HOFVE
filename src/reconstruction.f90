@@ -21,6 +21,12 @@ INTERFACE ReconstructionFixY
   MODULE PROCEDURE ReconstructionFixY
 END INTERFACE
 
+#ifdef GFWENO
+INTERFACE ReconstructionEta_Global
+  MODULE PROCEDURE ReconstructionEta_Global
+END INTERFACE
+#endif 
+
 INTERFACE MUSCL 
   MODULE PROCEDURE MUSCL 
 END INTERFACE
@@ -607,6 +613,76 @@ END SELECT
 
 !-------------------------------------------------------------------------------!
 END SUBROUTINE ReconstructionFixY
+!===============================================================================!
+!
+!
+!
+!===============================================================================!
+SUBROUTINE ReconstructionEtaGlobal()
+!-------------------------------------------------------------------------------!
+USE MOD_FiniteVolume2D_vars,ONLY: V
+USE MOD_FiniteVolume2D_vars,ONLY: Bath
+USE MOD_FiniteVolume2D_vars,ONLY: EtaM
+USE MOD_FiniteVolume2D_vars,ONLY: EtaP
+USE MOD_FiniteVolume2D_vars,ONLY: Ind
+USE MOD_FiniteVolume2D_vars,ONLY: MESH_DX
+USE MOD_FiniteVolume2D_vars,ONLY: nVar
+USE MOD_FiniteVolume2D_vars,ONLY: nElemsX
+USE MOD_FiniteVolume2D_vars,ONLY: nElemsY
+USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
+USE MOD_FiniteVolume2D_vars,ONLY: nGPs
+USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
+USE MOD_FiniteVolume2D_vars,ONLY: ReconstructionFix
+!-------------------------------------------------------------------------------!
+IMPLICIT NONE
+!-------------------------------------------------------------------------------!
+! >> FORMAL ARGUMENTS                                                           !
+!-------------------------------------------------------------------------------!
+! >> LOCAL VARIABLES                                                            !
+!-------------------------------------------------------------------------------!
+INTEGER            :: ii, jj, iGP
+CHARACTER(LEN=255) :: ErrorMessage
+!-------------------------------------------------------------------------------!
+
+IF ((Reconstruction .EQ. 1) .OR. (Reconstruction .EQ. 2)) THEN
+  RETURN
+END IF
+
+SELECT CASE (Reconstruction)
+  CASE(1)
+      DO ii=0,nElemsX+1
+          DO iGP=1,nGPs
+              EtaM(ii) = V(1,ii)+Bath(ii)
+              EtaP(ii) = V(1,ii)+Bath(ii)
+          END DO
+      END DO
+  CASE(2)
+      DO ii=0,nElemsX+1
+          CALL MUSCL_Global_Eta(&
+                    V(1:nVar,-nGhosts+ii:ii+nGhosts),&
+                    Bath(-nGhosts+ii:ii+nGhosts),&
+                    EtaM(ii),&
+                    EtaP(ii),&
+                    MESH_DX)
+      END DO
+  CASE(3,4)
+      DO ii=0,nElemsX+1
+          CALL WENO_Global_X_Eta(&
+                    V(1:nVar,-nGhosts+ii:ii+nGhosts),&
+                    Bath(-nGhosts+ii:ii+nGhosts),&
+                    EtaM(ii),&
+                    EtaP(ii),&
+                    MESH_DX,&
+                    Reconstruction)
+      END DO
+  CASE DEFAULT
+    ErrorMessage = "Reconstruction not implemented"
+    WRITE(*,*) ErrorMessage
+    STOP
+END SELECT
+
+!-------------------------------------------------------------------------------!
+END SUBROUTINE ReconstructionEtaGlobal
 !===============================================================================!
 !
 !

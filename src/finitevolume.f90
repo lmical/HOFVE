@@ -171,6 +171,21 @@ ALLOCATE(FluxX(1:nVar,1:nGPs,0:nElemsX,1:nElemsY))
 ALLOCATE(FluxY(1:nVar,1:nGPs,1:nElemsX,0:nElemsY))
 ALLOCATE(Ind(1:2,0:nElemsX+1,0:nElemsY+1))
 
+#ifdef GFWENO
+ALLOCATE(FFX(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^y FX + RX
+ALLOCATE(FFY(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^x FY + RY
+ALLOCATE( RX(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^x SX
+ALLOCATE( RY(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^y SY
+ALLOCATE( RX_interface(1:nVar,1:2,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1)) 
+ALLOCATE( RY_interface(1:nVar,1:2,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))   
+ALLOCATE(FG(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! FFX + FFY
+ALLOCATE(Eta(-2*nGhosts:nElemsX+2*nGhosts+1))
+ALLOCATE(EtaL)
+ALLOCATE(EtaR)
+ALLOCATE(EtaT)
+ALLOCATE(EtaB)
+#endif
+
 ALLOCATE(UN0(1:nVar,1:nElemsX,1:nElemsY))
 ALLOCATE( K0(1:nVar,1:nElemsX,1:nElemsY))
 ALLOCATE( K1(1:nVar,1:nElemsX,1:nElemsY))
@@ -447,6 +462,20 @@ REAL,INTENT(IN) :: t
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
 
+#ifdef GFWENO
+CALL BoundaryConditions(t)
+
+CALL ReconstructionEta_Global()
+CALL SourceTerms(t)
+CALL GlobalFluxTerms(t)
+
+CALL ReconstructionXY_Global()
+CALL NumericalFluxFG_Global()
+
+CALL UpdateTimeDerivative()
+
+#else
+
 CALL BoundaryConditions(t)
 
 CALL ShocksIndicatorX()
@@ -463,7 +492,7 @@ CALL NumericalFluxFY()
 
 CALL SourceTerms(t)
 CALL UpdateTimeDerivative()
-
+#endif
 !-------------------------------------------------------------------------------!
 END SUBROUTINE FVTimeDerivative
 !===============================================================================!
@@ -880,7 +909,23 @@ DEALLOCATE(K2)
 DEALLOCATE(K3)
 DEALLOCATE(K4)
 DEALLOCATE(K5)
-    
+
+#ifdef GFWENO
+DEALLOCATE(FFX) ! \int^y FX + RX
+DEALLOCATE(FFY) ! \int^x FY + RY
+DEALLOCATE(RX) ! \int^x SX
+DEALLOCATE(RY) ! \int^y SY
+DEALLOCATE(RX_interface) 
+DEALLOCATE(RY_interface)   
+DEALLOCATE(FG) ! FFX + FFY
+DEALLOCATE(Eta)
+DEALLOCATE(EtaL)
+DEALLOCATE(EtaR)
+DEALLOCATE(EtaT)
+DEALLOCATE(EtaB)
+#endif
+
+
 #ifdef EqnEuler
 DEALLOCATE(Gravitational_Potential_Averages)
 #endif
