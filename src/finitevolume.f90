@@ -174,16 +174,17 @@ ALLOCATE(Ind(1:2,0:nElemsX+1,0:nElemsY+1))
 #ifdef GFWENO
 ALLOCATE(FFX(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^y FX + RX
 ALLOCATE(FFY(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^x FY + RY
-ALLOCATE( RX(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^x SX
-ALLOCATE( RY(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^y SY
-ALLOCATE( RX_interface(1:nVar,1:2,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1)) 
-ALLOCATE( RY_interface(1:nVar,1:2,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))   
+ALLOCATE( RX(1:nGPs,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^x SX
+ALLOCATE( RY(1:nGPs,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^y SY
+ALLOCATE( RX_interface(1:2,1:nGPs,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1)) 
+ALLOCATE( RY_interface(1:2,1:nGPs,nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))   
 ALLOCATE(FG(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! FFX + FFY
-ALLOCATE(Eta(-2*nGhosts:nElemsX+2*nGhosts+1))
-ALLOCATE(EtaL)
-ALLOCATE(EtaR)
-ALLOCATE(EtaT)
-ALLOCATE(EtaB)
+ALLOCATE(Eta(-2*nGhosts:nElemsX+2*nGhosts+1,-2*nGhosts:nElemsY+2*nGhosts+1))
+ALLOCATE(Bath(-2*nGhosts:nElemsX+2*nGhosts+1,-2*nGhosts-1:nElemsY+2*nGhosts+1))
+ALLOCATE(Bath_interfaceX(1:2,1:nGPs,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))
+ALLOCATE(Bath_interfaceY(1:2,1:nGPs,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))
+ALLOCATE(Eta_interfaceX(1:2,1:nGPs,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))
+ALLOCATE(Eta_interfaceY(1:2,1:nGPs,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))
 #endif
 
 ALLOCATE(UN0(1:nVar,1:nElemsX,1:nElemsY))
@@ -465,7 +466,6 @@ REAL,INTENT(IN) :: t
 #ifdef GFWENO
 CALL BoundaryConditions(t)
 
-CALL ReconstructionEta_Global()
 CALL SourceTerms(t)
 CALL GlobalFluxTerms(t)
 
@@ -919,10 +919,10 @@ DEALLOCATE(RX_interface)
 DEALLOCATE(RY_interface)   
 DEALLOCATE(FG) ! FFX + FFY
 DEALLOCATE(Eta)
-DEALLOCATE(EtaL)
-DEALLOCATE(EtaR)
-DEALLOCATE(EtaT)
-DEALLOCATE(EtaB)
+DEALLOCATE(Eta_interfaceX)
+DEALLOCATE(Eta_interfaceY)
+DEALLOCATE(Bath_interfaceX)
+DEALLOCATE(Bath_interfaceY)
 #endif
 
 

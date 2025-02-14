@@ -98,6 +98,22 @@ REAL                :: LambdaMaxY
 
 INTEGER             :: source_flag
 
+#ifdef GFWENO
+REAL, ALLOCATABLE   :: FFX(:,:,:) ! \int^y FX + RX
+REAL, ALLOCATABLE   :: FFY(:,:,:) ! \int^x FY + RY
+REAL, ALLOCATABLE   :: RX(:,:,:) ! \int^x SX
+REAL, ALLOCATABLE   :: RY(:,:,:) ! \int^y SY
+REAL, ALLOCATABLE   :: RX_interface(:,:,:,:) 
+REAL, ALLOCATABLE   :: RY_interface(:,:,:,:)   
+REAL, ALLOCATABLE   :: FG(:,:,:) ! FFX + FFY
+REAL, ALLOCATABLE   :: Eta(:,:)
+REAL, ALLOCATABLE   :: Bath(:,:)
+REAL, ALLOCATABLE   :: Bath_interfaceX(:,:,:,:)
+REAL, ALLOCATABLE   :: Bath_interfaceY(:,:,:,:)
+REAL, ALLOCATABLE   :: Eta_interfaceX(:,:,:,:)
+REAL, ALLOCATABLE   :: Eta_interfaceY(:,:,:,:)
+#endif
+
 #ifdef EqnEuler
 REAL                :: Gmm
 #endif
@@ -108,6 +124,8 @@ REAL                :: Kappa
 
 #ifdef EqnShallowWater
 REAL                :: Gravity
+REAL                :: coriolis = 0.d0
+REAL                :: manning = 0.d0
 #endif
 
 INTEGER             :: maxTimeSteps
