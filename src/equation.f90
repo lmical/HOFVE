@@ -13,6 +13,10 @@ MODULE MOD_Equation
       MODULE PROCEDURE ExactFunctionWB
    END INTERFACE
 
+   INTERFACE GlobalFluxTerms
+      MODULE PROCEDURE GlobalFluxTerms
+   END INTERFACE
+
    INTERFACE SourceTerms
       MODULE PROCEDURE SourceTerms
    END INTERFACE
@@ -49,6 +53,7 @@ MODULE MOD_Equation
    PUBLIC :: ExactFunction
    PUBLIC :: ExactFunctionWB
    PUBLIC :: SourceTerms
+   PUBLIC :: GlobalFluxTerms
    PUBLIC :: BoundaryConditions
    PUBLIC :: TimeStep
    PUBLIC :: RiemannSolver
@@ -372,7 +377,8 @@ REAL               :: Ftemp(nVar,nGPs, nGPs)
 REAL               :: Fe, error, 
 REAL               :: FluxX(1:nVar,1:nGPs,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)
 REAL               :: FluxY(1:nVar,1:nGPs,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)
-REAL               :: FY(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)
+REAL               :: FFX_interface(1:2,1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)
+REAL               :: FFY_interface(1:2,1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)
 REAL               :: Utemp1X(0:nVar,nGPs,-2*nGhosts:nElemsX+2*nGhosts+1)
 REAL               :: Utemp2X(0:nVar,nGPs,nGPs)
 REAL               :: Utemp1Y(0:nVar,nGPs,-2*nGhosts:nElemsY+2*nGhosts+1)
@@ -530,14 +536,33 @@ END SELECT
 
 FluxX(2,:,:,:) = FluxX(2,:,:,:) + RX
 FluxY(3,:,:,:) = FluxY(3,:,:,:) + RY
+FFX = 0.
+FFY = 0.
+FFX_interface = 0.
+FFY_interface = 0.
 
 FG = 0.
+
+!!!!!!!!!!!!!!!!!!!  -----    MUST BE CHECKED  -----  !!!!!!!!!!!!!!!!!!!!!!
+! NO JUMP AT THE INTERFACE ?  I TRIED TO AVOID OTHER SWEEPS
 DO ii=-nGhosts,nElemsX+nGhosts+1
   DO jj=-nGhosts,nElemsY+nGhosts+1
-    DO iVar=1,nVar
-      FG(iVar,ii,jj) = FluxX
-FG
+      DO iVar=1,nVar
+         CALL SourceInterpIntegralCoeff(FluxX(iVar,1:nGPs,ii,jj), FFX(nVar,ii,jj))
+         FFX(iVar,ii,jj) = FFX(iVar,ii,jj) * MESH_DX(2)  !\int^y FX + RX
+         FFX_interface(2,iVar,ii,jj) = FFX_interface(1,iVar,ii,jj) + MESH_DX(2)*FFX(iVar,ii,jj)
+         FFX_interface(1,iVar,ii,jj+1) = FFX_interface(2,iVar,ii,jj)
 
+         CALL SourceInterpIntegralCoeff(FluxY(iVar,1:nGPs,ii,jj), FFY(nVar,ii,jj))
+         FFY(nVar,ii,jj) = FFY(nVar,ii,jj) * MESH_DX(1) !\int^x FY + RY
+         FFY_interface(2,iVar,ii,jj) = FFY_interface(1,iVar,ii,jj) + MESH_DX(1)*FFY(iVar,ii,jj)
+         FFY_interface(1,iVar,ii+1,jj) = FFY_interface(2,iVar,ii,jj)
+      END DO
+   END DO  
+END DO
+
+! 2D global flux computation
+FG = FFX + FFY
 
 
 !-------------------------------------------------------------------------------!
@@ -2086,13 +2111,13 @@ SUBROUTINE EvaluateFlux2D_Y(Prim,Flux)
 #endif
 
 !-------------------------------------------------------------------------------!
-END SUBROUTINE EvaluateFlux2D_X
+END SUBROUTINE EvaluateFlux2D_Y
 !===============================================================================!
 !
 !
 !
 !===============================================================================!
-   SUBROUTINE RiemannSolver(ConsL,ConsR,NormVect,TangVect,Flux)
+SUBROUTINE RiemannSolver(ConsL,ConsR,NormVect,TangVect,Flux)
 !-------------------------------------------------------------------------------!
       USE MOD_FiniteVolume2D_vars,ONLY: nVar
       USE MOD_FiniteVolume2D_vars,ONLY: nGPs
