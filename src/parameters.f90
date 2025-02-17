@@ -26,7 +26,9 @@ SUBROUTINE InitializeParameters()
 USE MOD_FiniteVolume2D_vars,ONLY: PI
 USE MOD_FiniteVolume2D_vars,ONLY: CFL
 USE MOD_FiniteVolume2D_vars,ONLY: TEnd
+#ifdef EqnEuler
 USE MOD_FiniteVolume2D_vars,ONLY: Gmm
+#endif
 USE MOD_FiniteVolume2D_vars,ONLY: nElemsX
 USE MOD_FiniteVolume2D_vars,ONLY: nElemsY
 USE MOD_FiniteVolume2D_vars,ONLY: MESH_X0
@@ -40,7 +42,14 @@ USE MOD_FiniteVolume2D_vars,ONLY: nOutputFiles
 USE MOD_FiniteVolume2D_vars,ONLY: InitialCondition
 USE MOD_FiniteVolume2D_vars,ONLY: BoundaryConditionsType
 USE MOD_FiniteVolume2D_vars,ONLY: VarNameVisu
+#ifdef EqnEuler
 USE MOD_FiniteVolume2D_vars,ONLY: source_flag
+#endif
+#ifdef EqnShallowWater
+USE MOD_FiniteVolume2D_vars,ONLY: Gravity
+USE MOD_FiniteVolume2D_vars,ONLY: BathymetryFlag
+#endif
+
 USE MOD_FiniteVolume2D_vars,ONLY: maxTimeSteps
 USE MOD_FiniteVolume2D_vars,ONLY: LinearWeightsOnly
 USE MOD_FiniteVolume2D_vars,ONLY: MStepsMax
@@ -592,7 +601,7 @@ VarNameVisu(1) = "Density"
 VarNameVisu(2) = "VelocityX"
 VarNameVisu(3) = "VelocityY"
 VarNameVisu(4) = "Pressure"
-VarNameVisu(5) = "Gravitational_Potential"
+! VarNameVisu(5) = "Gravitational_Potential"
 
 PRINT*, "--------------------------"
 PRINT*, "Test              = ", InitialCondition, TRIM(NameTest)

@@ -1295,8 +1295,97 @@ SELECT CASE (Reconstruction)
 !-------------------------------------------------------------------------------!
 END SUBROUTINE SourceInterpIntegralCoeff
 
- !===============================================================================!
- !
+!===============================================================================!
+!
+!
+!
+!
+!===============================================================================!
+SUBROUTINE Bath2DerivativeContinuous(b_left,b_quad,b_prime_quad)
+!-------------------------------------------------------------------------------!
+USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
+USE MOD_FiniteVolume2D_vars,ONLY: nGPs          
+!-------------------------------------------------------------------------------!
+IMPLICIT NONE
+!-------------------------------------------------------------------------------!
+! >> FORMAL ARGUMENTS                                                           !
+!-------------------------------------------------------------------------------!
+REAL,INTENT(IN)  :: b_quad(1:nGPs), b_left
+REAL,INTENT(OUT) :: b_prime_quad(1:nGPs)
+CHARACTER(LEN=255) :: ErrorMessage
+!-------------------------------------------------------------------------------!
+
+!---------------------------------------!
+! Coefficients interpolation derivative ! 
+! polynomials in quadrature points      !
+!---------------------------------------!
+
+SELECT CASE (Reconstruction)
+    CASE(0,1,2)
+      b_prime_quad(1) = -2.0000000000000000 * b_left+2.0000000000000000 * b_quad(1)
+    CASE(3)
+      b_prime_quad(1) = -3.4641016151377544 * b_left+3.0000000000000000 * b_quad(1)+0.4641016151377546 * b_quad(2)
+      b_prime_quad(2) = +3.4641016151377544 * b_left-6.4641016151377544 * b_quad(1)+3.0000000000000000 * b_quad(2)
+    CASE(4)
+      b_prime_quad(1) = -9.4332756589372018 * b_left+7.7386127875258302  * b_quad(1)+2.0450896503039089  * b_quad(2)-0.4370708023957989  * b_quad(3)+0.0866440235032617 * b_quad(4)
+      b_prime_quad(2) = +3.7243057339114563 * b_left-7.2013409997068907  * b_quad(1)+2.2613872124741694  * b_quad(2)+1.4487820345336813  * b_quad(3)-0.2331339812124166 * b_quad(4)
+      b_prime_quad(3) = -3.7243057339114563 * b_left+6.3436222186249713  * b_quad(1)-5.9715564594820201  * b_quad(2)+2.2613872124741694  * b_quad(3)+1.0908527622943358 * b_quad(4)
+      b_prime_quad(4) = +9.4332756589372018 * b_left-15.5638695985549234 * b_quad(1)+11.8927838780568411 * b_quad(2)-13.5008027259649506 * b_quad(3)+7.7386127875258302 * b_quad(4)
+    CASE DEFAULT
+      ErrorMessage = "Reconstruction not implemented in Source Coefficients"
+      WRITE(*,*) ErrorMessage
+      STOP
+  END SELECT
+
+
+
+END SUBROUTINE Bath2DerivativeContinuous
+!===============================================================================!
+!
+!
+!
+!===============================================================================!
+SUBROUTINE Bath2Derivative(b_quad,b_prime_quad)
+!-------------------------------------------------------------------------------!
+USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
+USE MOD_FiniteVolume2D_vars,ONLY: nGPs          
+!-------------------------------------------------------------------------------!
+IMPLICIT NONE
+!-------------------------------------------------------------------------------!
+! >> FORMAL ARGUMENTS                                                           !
+!-------------------------------------------------------------------------------!
+REAL,INTENT(IN)  :: b_quad(1:nGPs)
+REAL,INTENT(OUT) :: b_prime_quad(1:nGPs)
+CHARACTER(LEN=255) :: ErrorMessage
+!-------------------------------------------------------------------------------!
+
+!---------------------------------------!
+! Coefficients interpolation derivative ! 
+! polynomials in quadrature points      !
+!---------------------------------------!
+
+SELECT CASE (Reconstruction)
+    CASE(0,1,2)
+      b_prime_quad(1) = +0.0000000000000000 * b_quad(1)
+    CASE(3)
+      b_prime_quad(1) = -1.7320508075688772 * b_quad(1)+1.7320508075688772 * b_quad(2)
+      b_prime_quad(2) = -1.7320508075688772 * b_quad(1)+1.7320508075688772 * b_quad(2)
+    CASE(4)
+      b_prime_quad(1) = -6.6640004727045632 * b_quad(1)+9.7203088313703923 * b_quad(2)-4.2175646969903582 * b_quad(3)+1.1612563383245289 * b_quad(4)
+      b_prime_quad(2) = -1.5151152295984678 * b_quad(1)-0.7688287844464172 * b_quad(2)+2.9413404625614334 * b_quad(3)-0.6573964485165485 * b_quad(4)
+      b_prime_quad(3) = +0.6573964485165485 * b_quad(1)-2.9413404625614334 * b_quad(2)+0.7688287844464172 * b_quad(3)+1.5151152295984678 * b_quad(4)
+      b_prime_quad(4) = -1.1612563383245289 * b_quad(1)+4.2175646969903582 * b_quad(2)-9.7203088313703923 * b_quad(3)+6.6640004727045632 * b_quad(4)   
+    CASE DEFAULT
+      ErrorMessage = "Reconstruction not implemented in Source Coefficients"
+      WRITE(*,*) ErrorMessage
+      STOP
+  END SELECT
+
+
+
+END SUBROUTINE Bath2Derivative
+!===============================================================================!
+!
 #else
 !
 !===============================================================================!
