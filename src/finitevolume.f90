@@ -723,7 +723,7 @@ END SUBROUTINE NumericalFluxFY
 !===============================================================================!
 SUBROUTINE NumericalFluxFG_Global()
 !-------------------------------------------------------------------------------!
-USE MOD_Equation,           ONLY: RiemannSolver
+USE MOD_Equation,           ONLY: RiemannSolverCorner
 USE MOD_FiniteVolume2D_vars,ONLY: nDims
 USE MOD_FiniteVolume2D_vars,ONLY: nVar
 USE MOD_FiniteVolume2D_vars,ONLY: nElemsX
@@ -753,10 +753,10 @@ DO jj=0,nElemsY
   DO ii=0,nElemsX
     ! Reconstructing corner ii+1/2,jj+1/2
     CALL RiemannSolverCorner(&
-      FG_reconstructed_corner(1:nVar,2,2,ii+0,jj+0),&
-      FG_reconstructed_corner(1:nVar,1,2,ii+1,jj+0),&
-      FG_reconstructed_corner(1:nVar,1,1,ii+1,jj+1),&
-      FG_reconstructed_corner(1:nVar,2,1,ii+0,jj+1),&
+        FG_reconstructed_corner(1:nVar,2,2,ii+0,jj+0),&
+        FG_reconstructed_corner(1:nVar,1,2,ii+1,jj+0),&
+        FG_reconstructed_corner(1:nVar,1,1,ii+1,jj+1),&
+        FG_reconstructed_corner(1:nVar,2,1,ii+0,jj+1),&
       Cons_reconstructed_corner(1:nVar,2,2,ii+0,jj+0),&
       Cons_reconstructed_corner(1:nVar,1,2,ii+1,jj+0),&
       Cons_reconstructed_corner(1:nVar,1,1,ii+1,jj+1),&

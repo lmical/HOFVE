@@ -2379,7 +2379,6 @@ SELECT CASE(WhichRiemannSolver)
     NumFluxTL(1:nVar) = -( Central_Flux(1:nVar)) + MESH_DX(1)* s_max* (ConsTL(1:nVar)-Cons_aver(1:nVar))   
     NumFluxTR(1:nVar) = +( Central_Flux(1:nVar)) + MESH_DX(1)* s_max* (ConsTR(1:nVar)-Cons_aver(1:nVar))  
 
-#ifdef EqnShallowWater 
   CASE(3) !* SUPG
     
     JX = JacobianX(Cons_aver)
@@ -2397,49 +2396,6 @@ SELECT CASE(WhichRiemannSolver)
                                                       +MATMUL(JY,Jump_Flux))
     NumFluxTR(1:nVar) = +Central_Flux(1:nVar)  + tau*( MATMUL(JX,Jump_Flux)&
                                                       +MATMUL(JY,Jump_Flux))
-#endif
-#ifdef EqnEuler
-  CASE(2) !*Exact
-    al=SQRT(Gmm*PrimLL(4,iGP)/PrimLL(1,iGP)) !*sound_ro_e_scal(ul(1),ul(2+ndim),eos)
-    ar=SQRT(Gmm*PrimRR(4,iGP)/PrimRR(1,iGP)) !*sound_ro_e_scal(ur(1),ur(2+ndim),eos)
-    pl=PrimLL(4,iGP) !*pres_ro_e_scal (ul(1),ul(2+ndim),eos)
-    pr=PrimRR(4,iGP) !*pres_ro_e_scal (ur(1),ur(2+ndim),eos)
-    u_norm_l=PrimLL(2,iGP) !*SUM(ul(2:1+ndim)*n_norm)
-    u_norm_r=PrimRR(2,iGP) !*SUM(ur(2:1+ndim)*n_norm)
-    u_tan_l=PrimLL(3,iGP)  !*-ul(2)*n_norm(2)+ul(3)*n_norm(1)
-    u_tan_r=PrimRR(3,iGP)  !*-ur(2)*n_norm(2)+ur(3)*n_norm(1)
-
-
-    !*CALL exact_riemann(Gmm,         ul(1),         ur(1), rho_star_l, rho_star_r, u_norm_l, u_norm_r, um,   pl, pr, pm,   al,ar, speedl, speedr)
-    CALL exact_riemann(  Gmm, PrimLL(1,iGP), PrimRR(1,iGP), rho_star_l, rho_star_r, u_norm_l, u_norm_r, um,   pl, pr, pm,   al,ar, speedl, speedr)
-    !*OUT       !*OUT                           !*OUT         !*OUT        !*OUT   !*OUT
-
-    !*CALL sample(s,  vstar(3+ndim), vstar(2), vstar(1), ul(1),         ur(1),         u_norm_l, u_norm_r, um, pl, pr, pm, al, ar)
-    CALL sample(  s, vstar(3+nDims), vstar(2), vstar(1), PrimLL(1,iGP), PrimRR(1,iGP), u_norm_l, u_norm_r, um, pl, pr, pm, al, ar)
-    !*OUT          !*OUT     !*OUT
-
-    !*I DO NOT NEED TO PASS TO THE INTERNAL ENERGY
-    !*vstar(2+ndim)=e_ro_pres_scal(vstar(1),vstar(3+ndim),eos) ! energie interne
-
-
-
-    w(1)=vstar(1)
-    IF (um>0.0) THEN
-        w(2)=vstar(2)
-        w(3)=u_tan_l
-    ELSE
-        w(2)=vstar(2)
-        w(3)=u_tan_r
-    ENDIF
-    w(4)=vstar(3+nDims)
-
-    !*I DO NOT NEED TO ROTATE
-    ! vstar(2)=w(2)*n_norm(1)-w(3)*n_norm(2)
-    ! vstar(3)=w(2)*n_norm(2)+w(3)*n_norm(1)
-    ! vstar: ici rho, u,v,eint,p
-
-    CALL EvaluateFlux1D(w,Flux(1:nVar,iGP))
-#endif
   CASE DEFAULT
     PRINT*, "Riemann Solver not defined"
     PRINT*, "Riemann Solver was", WhichRiemannSolver
@@ -2449,7 +2405,6 @@ SELECT CASE(WhichRiemannSolver)
   ! Rotating back the momentum components
   Flux(2:3,iGP) = NormVect(1:nDims,iGP)*Flux(2,iGP) &
     + TangVect(1:nDims,iGP)*Flux(3,iGP)
-END DO
 
 !-------------------------------------------------------------------------------!
 END SUBROUTINE RiemannSolverCorner
