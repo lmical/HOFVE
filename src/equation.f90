@@ -41,9 +41,17 @@ INTERFACE PrimToCons
   MODULE PROCEDURE PrimToCons
 END INTERFACE
 
+#ifdef EqnEuler
 INTERFACE Gravitational_Potential
   MODULE PROCEDURE Gravitational_Potential
 END INTERFACE
+#endif
+
+#ifdef EqnShallowWater
+INTERFACE Bathymetry
+  MODULE PROCEDURE Bathymetry
+END INTERFACE
+#endif
 
 #ifdef GFWENO
 INTERFACE GlobalFluxTerms
@@ -66,7 +74,12 @@ PUBLIC :: RiemannSolver
 PUBLIC :: EvaluateFlux1D
 PUBLIC :: ConsToPrim
 PUBLIC :: PrimToCons
+#ifdef EqnEuler
 PUBLIC :: Gravitational_Potential
+#endif
+#ifdef EqnShallowWater
+PUBLIC :: Bathymetry
+#endif
 #ifdef GFWENO
 PUBLIC :: RiemannSolverCorner 
 #endif
@@ -97,6 +110,9 @@ USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR
 #ifdef EqnEuler
 USE MOD_FiniteVolume2D_vars,ONLY: Gmm
 #endif
+#ifdef EqnShallowWater
+USE MOD_FiniteVolume2D_vars,ONLY: Gravity
+#endif
 #ifdef SW
 USE MOD_FiniteVolume2D_vars,ONLY: Gravity
 USE MOD_FiniteVolume2D_vars,ONLY: Kappa
@@ -119,6 +135,7 @@ CHARACTER(LEN=255) :: ErrorMessage
 !-------------------------------------------------------------------------------!
 !*OUR VARIABLES
 REAL               :: Omega, Jamma, u_inf, v_inf, h_inf, DeltaH
+REAL               :: d, eta, gamma, H_over_d, L, u, x0
 INTEGER            :: power
 REAL               :: ro_inf, p_inf, beta, delta_u, delta_v, delta_T
 REAL               :: xmxc(1:2), x_wrt_BL(1:2), x_wrt_BL_bm(1:2), x_0(1:2), x_d(1:2)
@@ -279,8 +296,332 @@ CASE(892)
   CALL PrimToCons(Prim,Cons)
 
 #endif
-#ifdef EqnAcoustics
+
+#ifdef EqnShallowWater
+  CASE(1) !*UNSTEADY SMOOTH VORTEX
+    u_inf = 2.
+    v_inf = 3.
+    H_inf=1.
+    r0 = 1.
+
+    xm(1) = MESH_X0(1)+0.5*MESH_SX(1)
+    xm(2) = MESH_X0(2)+0.5*MESH_SX(2)
+    xc(1) = MODULO( x(1)-u_inf*t-MESH_X0(1) , Mesh_SX(1) ) + MESH_X0(1)-xm(1)
+    xc(2) = MODULO( x(2)-v_inf*t-MESH_X0(2) , Mesh_SX(2) ) + MESH_X0(2)-xm(2)
+    r     = (xc(1)**2 + xc(2)**2)
+    Omega = sqrt(2.*Gravity*hDerivSmoothAuxiliary(r))
+
+    Prim(1) = H_inf
+    Prim(2) = u_inf
+    Prim(3) = v_inf
+
+    IF (r .LT. 1) THEN
+      Prim(1) = hSmoothAuxiliary(r)
+      Prim(2) = Prim(2)+Omega*(+xc(2))
+      Prim(3) = Prim(3)+Omega*(-xc(1))
+    END IF
+
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(2) !*LAKE AT REST
+    Prim(1) = 1. - 0.1 * SIN(2.*PI*x(1)) * COS(2.*PI*x(2))
+    Prim(2) = 0.
+    Prim(3) = 0.
+
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(20) !*LAKE AT REST PERTURBATION
+    Prim(1) = 1. - 0.1 * SIN(2.*PI*x(1)) * COS(2.*PI*x(2))
+    Prim(2) = 0.
+    Prim(3) = 0.
+
+    !*Same perturbation as in the old paper but on the wet lake at rest
+    r2 = ((x(1)-0.5)**2 +(x(2)-0.5)**2)*36.
+    IF (r2<1.) THEN
+      Prim(1) = Prim(1) + 0.0001*EXP(1.-1./(1-r2)**2.)
+    ENDIF
+
+
+    CALL PrimToCons(Prim,Cons)
+
+
+  CASE(21) ! *PERTURBATION ANALYSIS ON WET LAKE AT REST NON-SMOOTH
+
+    Prim(1) = 1.2-Bathymetry(x)
+    r2 = ((x(1)+2.d0)**2 +(x(2)-0.5d0)**2)*9.
+    IF (r2<1) THEN
+      Prim(1) = Prim(1) + 0.0005*EXP(1.-1./(1-r2)**2.)
+    ENDIF
+    Prim(2:3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+
+  CASE(3) ! *PERTURBATION ANALYSIS ON WET-DRY LAKE AT REST
+
+    Prim(1) = MAX(0.7-Bathymetry(x),MIN_POSITIVE_VAR)
+    r2 = ((x(1)+2.)**2 +(x(2)-0.5)**2)*9.
+    ! IF (r2<1) THEN
+    !   Prim(1) = Prim(1) + 0.05*EXP(1.-1./(1-r2)**2.)
+    ! ENDIF
+    Prim(2:3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+
+  CASE(30) ! *PERTURBATION ANALYSIS ON WET-DRY LAKE AT REST
+
+    Prim(1) = MAX(0.7-Bathymetry(x),MIN_POSITIVE_VAR)
+    r2 = ((x(1)+2)**2 +(x(2)-0.5)**2)*9.
+    IF (r2<1) THEN
+      Prim(1) = Prim(1) + 0.05*EXP(1.-1./(1-r2)**2.)
+    ENDIF
+    Prim(2:3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+
+  CASE(31) ! *PERTURBATION ANALYSIS ON WET-DRY LAKE AT REST
+
+    Prim(1) = MAX(0.7-Bathymetry(x),MIN_POSITIVE_VAR)
+    r2 = ((x(1)+2)**2 )*9.
+    IF (r2<1) THEN
+      Prim(1) = Prim(1) + 0.05*EXP(1.-1./(1-r2)**2.)
+    ENDIF
+    Prim(2:3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+
+  CASE(4) ! *CIRCULAR DAM BREAK 1
+    xm(1) = MESH_X0(1)+0.5*MESH_SX(1)
+    xm(2) = MESH_X0(2)+0.5*MESH_SX(2)
+    xc(1) = x(1)-xm(1)
+    xc(2) = x(2)-xm(2)
+    r     = SQRT(xc(1)**2 + xc(2)**2)
+
+    r0    = 7.
+
+    Prim(1) = MIN_POSITIVE_VAR
+    Prim(2) = 0.0
+    Prim(3) = 0.0
+
+    IF (r .LE. r0) THEN
+      Prim(1) = 2.5
+      Prim(2) = 0.0
+      Prim(3) = 0.0
+    END IF
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(5) ! *CIRCULAR DAM BREAK 2
+    xm(1) = MESH_X0(1)+0.5*MESH_SX(1)
+    xm(2) = MESH_X0(2)+0.5*MESH_SX(2)
+    xc(1) = x(1)-xm(1)
+    xc(2) = x(2)-xm(2)
+    r     = SQRT(xc(1)**2 + xc(2)**2)
+
+    r0    = 15.
+
+    Prim(1) = 0.5
+    Prim(2) = 0.0
+    Prim(3) = 0.0
+
+    IF (r .LE. r0) THEN
+      Prim(1) = 10.
+      Prim(2) = 0.0
+      Prim(3) = 0.0
+    END IF
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(6) ! *WAVE OVER DRY ISLAND
+    r2 = (x(1)+2.d0)**2.
+    Prim(1) = MAX(0.7d0-Bathymetry(x),MIN_POSITIVE_VAR)
+    IF (r2<1) THEN
+      Prim(1) =Prim(1) + 0.5*EXP(1.d0-1.d0/(1.d0-r2)**2.)
+    ENDIF
+    IF (Prim(1)>MIN_POSITIVE_VAR*10.d0) THEN
+      Prim(2) = 1.0d0
+    ELSE
+      Prim(2) = 0.0d0
+    ENDIF
+    Prim(3) = 0.0d0
+
+    CALL PrimToCons(Prim,Cons)
+
+
+  
+  CASE(7) !* TSUNAMI 
+
+    Prim(1) = MIN_POSITIVE_VAR
+    Prim(2) = 0.0d0
+    Prim(3) = 0.0d0
+
+    IF (x(1) .LE. -3.5d0) THEN
+      Prim(1) = 1.5d0-Bathymetry(x)
+      Prim(2) = 4.0d0
+      Prim(3) = 0.0d0
+    END IF
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(8) !* SOLITARY WAVE ON CONICAL ISLAND
+
+    Prim(1) = MAX(0.32-Bathymetry(x),MIN_POSITIVE_VAR)
+    Prim(2:3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+
+  CASE(10) !* SOLITARY WAVE ON CONICAL ISLAND
+    d = 1.
+    beta = -1.0/19.85  
+    x0 = -d/beta
+
+    H_over_d = 0.3
+    gamma = sqrt(3.0/4.0*H_over_d)
+    L = d* acosh(sqrt(20.0))/gamma
+    eta = H_over_d*d /  cosh(gamma * (x(1) - x0-L) / d)**2
+
+    u=-eta*SQRT(Gravity/d)
+
+    Prim(1) = MAX(eta-Bathymetry(x),MIN_POSITIVE_VAR)
+    IF (Prim(1)<MIN_POSITIVE_VAR) THEN
+      Prim(2)=0.
+    ELSE
+      Prim(2) = u
+    ENDIF
+    Prim(3) = 0.0
+    
+    CALL PrimToCons(Prim,Cons)
+
+
+  CASE(11) !* SOLITARY WAVE ON CONICAL ISLAND
+    d = 1.
+    beta = -1.0/19.85  
+    x0 = -d/beta
+
+    H_over_d = 0.0185
+    gamma = sqrt(3.0/4.0*H_over_d)
+    L = d* acosh(sqrt(20.0))/gamma
+    eta = H_over_d*d /  cosh(gamma * (x(1) - x0-L) / d)**2
+
+    u=-eta*SQRT(Gravity/d)
+
+    Prim(1) = MAX(eta-Bathymetry(x),MIN_POSITIVE_VAR)
+    IF (Prim(1)<MIN_POSITIVE_VAR) THEN
+      Prim(2)=0.
+    ELSE
+      Prim(2) = u
+    ENDIF
+    Prim(3) = 0.0
+    
+    CALL PrimToCons(Prim,Cons)
+
+
+
+  !*----------------------------------------
+  !*Lakes at rest 40-41-42-43
+  !*with bump bathymetry 2
+  !*domain [-5,5]x[-2,2]
+  !*----------------------------------------
+  !*->40 Wet unperturbed
+  !*->41 Wet perturbed
+  !*->42 Wet-Dry unperturbed
+  !*->43 Wet-Dry perturbed
+  !*----------------------------------------
+  CASE(40)
+
+    Prim(1) = 1.5-Bathymetry(x)
+    r2 = ((x(1)+2.)**2 +(x(2)-0.5)**2)*9.
+    Prim(2:3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(41)
+
+    Prim(1) = 1.5-Bathymetry(x)
+    r2 = ((x(1)+2.)**2 +(x(2)-0.5)**2)*9.
+    IF (r2<1) THEN
+      Prim(1) = Prim(1) + 0.05*EXP(1.-1./(1-r2)**2.)
+    ENDIF
+    Prim(2:3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+
+  CASE(42)
+
+    Prim(1) = MAX(0.7-Bathymetry(x),MIN_POSITIVE_VAR)
+    r2 = ((x(1)+2.)**2 +(x(2)-0.5)**2)*9.
+    Prim(2:3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(43)
+
+    Prim(1) = MAX(0.7-Bathymetry(x),MIN_POSITIVE_VAR)
+    r2 = ((x(1)+2.)**2 +(x(2)-0.5)**2)*9.
+    IF (r2<1) THEN
+      Prim(1) = Prim(1) + 0.5*EXP(1.-1./(1-r2)**2.)
+    ENDIF
+    Prim(2:3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+  CASE(150,350) ! supercritical flow
+    Prim(1) = 2.0 - Bathymetry(x)
+    Prim(2) = 24./Prim(1)
+    Prim(3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(151,351) ! subcritical flow
+    Prim(1) = 2.0 - Bathymetry(x)
+    Prim(2) = 4.42/Prim(1)
+    Prim(3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(152,352) ! transcritical without shock
+    Prim(1) = 0.66 - Bathymetry(x)
+    Prim(2) = 1.53/Prim(1)
+    Prim(3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(153) ! ! transcritical with shock
+    Prim(1) = 0.33 - Bathymetry(x)
+    Prim(2) = 0.18/Prim(1)
+    Prim(3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(250,251) ! supercritical flow
+
+    IF ( (x(1) .GT. 9.) .and. (x(1) .LT. 10.) ) THEN
+      r2 = 4.*(x(1) - 9.5)**2
+      Prim(1) = Prim(1) + 1.e-3*EXP(1.-1./(1-r2)**2.)
+    ENDIF
+
+    Prim(2:3) = 0.0
+
+    CALL PrimToCons(Prim,Cons)
+
+  CASE(450,451) ! PERTURBATION super/subcritical flow
+
+    r2 = 4.d0*((x(1) - 9.5d0)**2+(x(2) - 5.d0)**2)
+    IF ( r2.LT. 1.d0 ) THEN
+      Prim(1) = Prim(1) + 1.e-4*EXP(1.d0-1.d0/(1.d0-r2)**2)
+    ENDIF
+
+    CALL PrimToCons(Prim,Cons)
+
+
 #endif
+
+#ifdef EqnAcoustics
+
+#endif
+
+
 CASE DEFAULT
   ErrorMessage = "Exact function not specified"
   WRITE(*,*) ErrorMessage
@@ -365,6 +706,7 @@ USE MOD_FiniteVolume2D_vars,ONLY: Gravity
 USE MOD_FiniteVolume2D_vars,ONLY: InitialCondition
 USE MOD_FiniteVolume2D_vars,ONLY: MeshGP          
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGP          
+USE MOD_FiniteVolume2D_vars,ONLY: quadWeights1D   
 USE MOD_FiniteVolume2D_vars,ONLY: nGPs         
 USE MOD_FiniteVolume2D_vars,ONLY: nVar         
 USE MOD_FiniteVolume2D_vars,ONLY: MESH_DX      
@@ -372,6 +714,8 @@ USE MOD_FiniteVolume2D_vars,ONLY: MESH_X1
 USE MOD_FiniteVolume2D_vars,ONLY: MESH_X0      
 USE MOD_FiniteVolume2D_vars,ONLY: RX
 USE MOD_FiniteVolume2D_vars,ONLY: RY
+USE MOD_FiniteVolume2D_vars,ONLY: FFX
+USE MOD_FiniteVolume2D_vars,ONLY: FFY
 USE MOD_FiniteVolume2D_vars,ONLY: FG
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
@@ -383,23 +727,18 @@ REAL,INTENT(IN)  :: t
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
 REAL               :: Ftemp(nVar,nGPs, nGPs)
-REAL               :: Fe, error, 
 REAL               :: FluxX(1:nVar,1:nGPs,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)
 REAL               :: FluxY(1:nVar,1:nGPs,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)
 REAL               :: FFX_interface(1:2,1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)
 REAL               :: FFY_interface(1:2,1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)
-REAL               :: Utemp1X(0:nVar,nGPs,-2*nGhosts:nElemsX+2*nGhosts+1)
-REAL               :: Utemp2X(0:nVar,nGPs,nGPs)
-REAL               :: Utemp1Y(0:nVar,nGPs,-2*nGhosts:nElemsY+2*nGhosts+1)
-REAL               :: Utemp2Y(0:nVar,nGPs,nGPs)
+REAL               :: Utemp1(0:nVar,nGPs,-2*nGhosts:nElemsX+2*nGhosts+1)
+REAL               :: Utemp2(0:nVar,nGPs,nGPs)
 REAL               :: Vtemp(nVar,nGPs,nGPs), FluxX_int, FluxY_int
-INTEGER            :: ii, iGP, iVar
+INTEGER            :: ii, jj, iGP, jGP, iVar
 CHARACTER(LEN=255) :: ErrorMessage
 !-------------------------------------------------------------------------------!
 Ftemp = 0.
-Utemp = 0.
 Vtemp = 0.
-FF    = 0.
 FluxX = 0.
 FluxY = 0.
 
@@ -421,7 +760,7 @@ SELECT CASE (Reconstruction)
           DO iGP=1,nGPs
             CALL ConsToPrim( Utemp2(1:nVar,iGP, jGP) , Vtemp(1:nVar,iGP,jGP) )
             CALL EvaluateFlux2D_X( Vtemp(1:nVar,iGP, jGP) , Ftemp(1:nVar,iGP,jGP) )
-            FluxX(1:nVar,jGP,ii,jj) = FluxX(1:nVar,jGP,ii,jj) + WeightsGP(iGP) * Ftemp(1:nVar,iGP,jGP) 
+            FluxX(1:nVar,jGP,ii,jj) = FluxX(1:nVar,jGP,ii,jj) + quadWeights1D(iGP) * Ftemp(1:nVar,iGP,jGP) 
           END DO 
         END DO
       END DO  
@@ -443,7 +782,7 @@ SELECT CASE (Reconstruction)
           DO jGP=1,nGPs
             CALL ConsToPrim( Utemp2(1:nVar,iGP, jGP) , Vtemp(1:nVar,iGP,jGP) )
             CALL EvaluateFlux2D_Y( Vtemp(1:nVar,iGP, jGP) , Ftemp(1:nVar,iGP,jGP) )
-            FluxY(1:nVar,iGP,ii,jj) = FluxY(1:nVar,iGP,ii,jj) + WeightsGP(jGP) * Ftemp(1:nVar,iGP,jGP) 
+            FluxY(1:nVar,iGP,ii,jj) = FluxY(1:nVar,iGP,ii,jj) + quadWeights1D(jGP) * Ftemp(1:nVar,iGP,jGP) 
           END DO 
         END DO
       END DO  
@@ -465,7 +804,7 @@ SELECT CASE (Reconstruction)
           DO iGP=1,nGPs
             CALL ConsToPrim( Utemp2(1:nVar,iGP, jGP) , Vtemp(1:nVar,iGP,jGP) )
             CALL EvaluateFlux2D_X( Vtemp(1:nVar,iGP, jGP) , Ftemp(1:nVar,iGP,jGP) )
-            FluxX(1:nVar,jGP,ii,jj) = FluxX(1:nVar,jGP,ii,jj) + WeightsGP(iGP) * Ftemp(1:nVar,iGP,jGP) 
+            FluxX(1:nVar,jGP,ii,jj) = FluxX(1:nVar,jGP,ii,jj) + quadWeights1D(iGP) * Ftemp(1:nVar,iGP,jGP) 
           END DO 
         END DO
       END DO  
@@ -487,7 +826,7 @@ SELECT CASE (Reconstruction)
           DO jGP=1,nGPs
             CALL ConsToPrim( Utemp2(1:nVar,iGP, jGP) , Vtemp(1:nVar,iGP,jGP) )
             CALL EvaluateFlux2D_Y( Vtemp(1:nVar,iGP, jGP) , Ftemp(1:nVar,iGP,jGP) )
-            FluxY(1:nVar,iGP,ii,jj) = FluxY(1:nVar,iGP,ii,jj) + WeightsGP(jGP) * Ftemp(1:nVar,iGP,jGP) 
+            FluxY(1:nVar,iGP,ii,jj) = FluxY(1:nVar,iGP,ii,jj) + quadWeights1D(jGP) * Ftemp(1:nVar,iGP,jGP) 
           END DO 
         END DO
       END DO  
@@ -509,7 +848,7 @@ SELECT CASE (Reconstruction)
           DO iGP=1,nGPs
             CALL ConsToPrim( Utemp2(1:nVar,iGP, jGP) , Vtemp(1:nVar,iGP,jGP) )
             CALL EvaluateFlux2D_X( Vtemp(1:nVar,iGP, jGP) , Ftemp(1:nVar,iGP,jGP) )
-            FluxX(1:nVar,jGP,ii,jj) = FluxX(1:nVar,jGP,ii,jj) + WeightsGP(iGP) * Ftemp(1:nVar,iGP,jGP) 
+            FluxX(1:nVar,jGP,ii,jj) = FluxX(1:nVar,jGP,ii,jj) + quadWeights1D(iGP) * Ftemp(1:nVar,iGP,jGP) 
           END DO 
         END DO
       END DO  
@@ -531,7 +870,7 @@ SELECT CASE (Reconstruction)
           DO jGP=1,nGPs
             CALL ConsToPrim( Utemp2(1:nVar,iGP, jGP) , Vtemp(1:nVar,iGP,jGP) )
             CALL EvaluateFlux2D_Y( Vtemp(1:nVar,iGP, jGP) , Ftemp(1:nVar,iGP,jGP) )
-            FluxY(1:nVar,iGP,ii,jj) = FluxY(1:nVar,iGP,ii,jj) + WeightsGP(jGP) * Ftemp(1:nVar,iGP,jGP) 
+            FluxY(1:nVar,iGP,ii,jj) = FluxY(1:nVar,iGP,ii,jj) + quadWeights1D(jGP) * Ftemp(1:nVar,iGP,jGP) 
           END DO 
         END DO
       END DO  
@@ -561,7 +900,7 @@ DO ii=-nGhosts,nElemsX+nGhosts+1
 
          FluxX_int = 0.
          DO jGP = 1,nGPs
-            FluxX_int  = FluxX_int + WeightsGP(jGP) * FluxX(iVar,jGP,ii,jj) 
+            FluxX_int  = FluxX_int + quadWeights1D(jGP) * FluxX(iVar,jGP,ii,jj) 
          END DO
 
         ! \int^{y_j+1/2} FX + RX until right interface
@@ -574,7 +913,7 @@ DO ii=-nGhosts,nElemsX+nGhosts+1
 
          FluxY_int = 0.
          DO iGP = 1,nGPs
-            FluxY_int  = FluxY_int + WeightsGP(iGP) * FluxY(iVar,iGP,ii,jj) 
+            FluxY_int  = FluxY_int + quadWeights1D(iGP) * FluxY(iVar,iGP,ii,jj) 
          END DO
          
          ! \int^{x_i+1/2} FY + RY until right interface
@@ -613,22 +952,21 @@ SUBROUTINE SourceTerms(t)
   USE MOD_FiniteVolume2D_vars,ONLY: MeshBary
   USE MOD_FiniteVolume2D_vars,ONLY: MeshGP
   USE MOD_FiniteVolume2D_vars,ONLY: WeightsGP
+  USE MOD_FiniteVolume2D_vars,ONLY: quadWeights1D
   USE MOD_FiniteVolume2D_vars,ONLY: nElemsX
+  USE MOD_FiniteVolume2D_vars,ONLY: nElemsY
   USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
   USE MOD_FiniteVolume2D_vars,ONLY: MESH_DX
   USE MOD_FiniteVolume2D_vars,ONLY: U
   USE MOD_FiniteVolume2D_vars,ONLY: V
-  USE MOD_FiniteVolume2D_vars,ONLY: V_reconstructed
   USE MOD_FiniteVolume2D_vars,ONLY: Bath
   USE MOD_FiniteVolume2D_vars,ONLY: Eta
-  USE MOD_FiniteVolume2D_vars,ONLY: EtaL
-  USE MOD_FiniteVolume2D_vars,ONLY: EtaR
-  USE MOD_FiniteVolume2D_vars,ONLY: EtaB
-  USE MOD_FiniteVolume2D_vars,ONLY: EtaT
   USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
   USE MOD_FiniteVolume2D_vars,ONLY: Gravity
   USE MOD_FiniteVolume2D_vars,ONLY: Bath_interfaceX
   USE MOD_FiniteVolume2D_vars,ONLY: Bath_interfaceY
+  USE MOD_FiniteVolume2D_vars,ONLY: Eta_interfaceX
+  USE MOD_FiniteVolume2D_vars,ONLY: Eta_interfaceY
   USE MOD_FiniteVolume2D_vars,ONLY: BathymetryFlag
   USE MOD_FiniteVolume2D_vars,ONLY: manning, coriolis
   !-------------------------------------------------------------------------------!
@@ -657,10 +995,10 @@ SUBROUTINE SourceTerms(t)
   !-------------------------------------------------------------------------------!
 
   ! define cell averages of Eta
-  Eta(:) = V(1,:) + Bath(:)
+  Eta(:,:) = V(1,:,:) + Bath(:,:)
 
   ! compute source integral
-  S = 0.0
+  S_int = 0.0
   B2X = 0.0
   B2Y = 0.0
   BathDerivX_quad = 0.0
@@ -682,7 +1020,7 @@ SUBROUTINE SourceTerms(t)
       DO ii=-2*nGhosts,nElemsX+2*nGhosts+1
         CALL WENO1_SecondSweep( Bath(ii,jj-nGhosts:jj+nGhosts), Eta(ii,jj-nGhosts:jj+nGhosts), U_temp(0,1:nGPs,ii,jj) )
         CALL WENO1_SecondSweep( Eta(ii,jj-nGhosts:jj+nGhosts) , Eta(ii,jj-nGhosts:jj+nGhosts), U_temp(1,1:nGPs,ii,jj) )
-        DO iVar=2:nVar
+        DO iVar=2,nVar
               CALL WENO1_SecondSweep( U(2,ii,jj-nGhosts:jj+nGhosts) , U(2,ii,jj-nGhosts:jj+nGhosts), U_temp(iVar,1:nGPs,ii,jj) )
         END DO
       END DO
@@ -690,10 +1028,10 @@ SUBROUTINE SourceTerms(t)
 
     DO jj=-nGhosts,nElemsY+nGhosts+1
         DO ii=-nGhosts,nElemsX+nGhosts+1
-          DO jGP = 1:nGPs
+          DO jGP = 1,nGPs
             CALL WENO1_SecondSweep( U_temp(0,jGP, ii-nGhosts:ii+nGhosts,jj) , U_temp(1,jGP, ii-nGhosts:ii+nGhosts,jj), Bath_quad(1:nGPs,jGP,ii,jj) )
             CALL WENO1_SecondSweep( U_temp(1,jGP, ii-nGhosts:ii+nGhosts,jj) , U_temp(1,jGP, ii-nGhosts:ii+nGhosts,jj), Eta_quad(1:nGPs,jGP,ii,jj) )
-            DO iVar=2:nVar
+            DO iVar=2,nVar
               CALL WENO1_SecondSweep( U_temp(iVar,jGP, ii-nGhosts:ii+nGhosts,jj) , U_temp(iVar,jGP, ii-nGhosts:ii+nGhosts,jj), U_quad(iVar,1:nGPs,jGP,ii,jj) )
             END DO
           END DO
@@ -707,7 +1045,7 @@ SUBROUTINE SourceTerms(t)
       DO ii=-2*nGhosts,nElemsX+2*nGhosts+1
         CALL WENO3_SecondSweep( Bath(ii,jj-nGhosts:jj+nGhosts), Eta(ii,jj-nGhosts:jj+nGhosts), U_temp(0,1:nGPs,ii,jj) )
         CALL WENO3_SecondSweep( Eta(ii,jj-nGhosts:jj+nGhosts) , Eta(ii,jj-nGhosts:jj+nGhosts), U_temp(1,1:nGPs,ii,jj) )
-        DO iVar=2:nVar
+        DO iVar=2,nVar
               CALL WENO3_SecondSweep( U(2,ii,jj-nGhosts:jj+nGhosts) , U(2,ii,jj-nGhosts:jj+nGhosts), U_temp(iVar,1:nGPs,ii,jj) )
         END DO
       END DO
@@ -715,10 +1053,10 @@ SUBROUTINE SourceTerms(t)
 
     DO jj=-nGhosts,nElemsY+nGhosts+1
         DO ii=-nGhosts,nElemsX+nGhosts+1
-          DO jGP = 1:nGPs
+          DO jGP = 1,nGPs
             CALL WENO3_SecondSweep( U_temp(0,jGP, ii-nGhosts:ii+nGhosts,jj) , U_temp(1,jGP, ii-nGhosts:ii+nGhosts,jj), Bath_quad(1:nGPs,jGP,ii,jj) )
             CALL WENO3_SecondSweep( U_temp(1,jGP, ii-nGhosts:ii+nGhosts,jj) , U_temp(1,jGP, ii-nGhosts:ii+nGhosts,jj), Eta_quad(1:nGPs,jGP,ii,jj) )
-            DO iVar=2:nVar
+            DO iVar=2,nVar
               CALL WENO3_SecondSweep( U_temp(iVar,jGP, ii-nGhosts:ii+nGhosts,jj) , U_temp(iVar,jGP, ii-nGhosts:ii+nGhosts,jj), U_quad(iVar,1:nGPs,jGP,ii,jj) )
             END DO
           END DO
@@ -733,7 +1071,7 @@ SUBROUTINE SourceTerms(t)
       DO ii=-2*nGhosts,nElemsX+2*nGhosts+1
         CALL WENO5_SecondSweep( Bath(ii,jj-nGhosts:jj+nGhosts), Eta(ii,jj-nGhosts:jj+nGhosts), U_temp(0,1:nGPs,ii,jj) )
         CALL WENO5_SecondSweep( Eta(ii,jj-nGhosts:jj+nGhosts) , Eta(ii,jj-nGhosts:jj+nGhosts), U_temp(1,1:nGPs,ii,jj) )
-        DO iVar=2:nVar
+        DO iVar=2,nVar
               CALL WENO5_SecondSweep( U(2,ii,jj-nGhosts:jj+nGhosts) , U(2,ii,jj-nGhosts:jj+nGhosts), U_temp(iVar,1:nGPs,ii,jj) )
         END DO
       END DO
@@ -741,10 +1079,10 @@ SUBROUTINE SourceTerms(t)
 
     DO jj=-nGhosts,nElemsY+nGhosts+1
         DO ii=-nGhosts,nElemsX+nGhosts+1
-          DO jGP = 1:nGPs
+          DO jGP = 1,nGPs
             CALL WENO5_SecondSweep( U_temp(0,jGP, ii-nGhosts:ii+nGhosts,jj) , U_temp(1,jGP, ii-nGhosts:ii+nGhosts,jj), Bath_quad(1:nGPs,jGP,ii,jj) )
             CALL WENO5_SecondSweep( U_temp(1,jGP, ii-nGhosts:ii+nGhosts,jj) , U_temp(1,jGP, ii-nGhosts:ii+nGhosts,jj), Eta_quad(1:nGPs,jGP,ii,jj) )
-            DO iVar=2:nVar
+            DO iVar=2,nVar
               CALL WENO5_SecondSweep( U_temp(iVar,jGP, ii-nGhosts:ii+nGhosts,jj) , U_temp(iVar,jGP, ii-nGhosts:ii+nGhosts,jj), U_quad(iVar,1:nGPs,jGP,ii,jj) )
             END DO
           END DO
@@ -784,8 +1122,8 @@ SUBROUTINE SourceTerms(t)
 
 
   ! compute \sum_q { w_q * 1/2 * ( b(x_q)^2 - b(x_{i-1/2})^2 ) }
-  B2X(1:nVar,:,:,:) = 0.0
-  B2Y(1:nVar,:,:,:) = 0.0
+  B2X(1:nVar,:,:) = 0.0
+  B2Y(1:nVar,:,:) = 0.0
 
   ! Bath_interfaceX(1,jGP,ii,jj) is the reconstruction at the left interface of the cell
   ! Bath_interfaceX(2,jGP,ii,jj) is the reconstruction at the right interface of the cell
@@ -804,14 +1142,14 @@ SUBROUTINE SourceTerms(t)
       !
       DO jGP=1,nGPs
         DO iGP=1,nGPs
-          B2X(jGP, ii,jj) = B2X(jGP, ii,jj) + WeightsGP(iGP)  * 0.5 * Bath_quad(iGP,jGP,ii,jj)**2 * Gravity
+          B2X(jGP, ii,jj) = B2X(jGP, ii,jj) + quadWeights1D(iGP)  * 0.5 * Bath_quad(iGP,jGP,ii,jj)**2 * Gravity
         END DO
         B2X(jGP, ii,jj) = B2X(jGP, ii,jj) - 0.5 * Bath_interfaceX(1,jGP,ii,jj)**2 * Gravity
       END DO
 
       DO iGP=1,nGPs
         DO jGP=1,nGPs
-          B2Y(iGP, ii,jj) = B2Y(iGP, ii,jj) + WeightsGP(jGP)  * 0.5 * Bath_quad(iGP,jGP,ii,jj)**2 * Gravity
+          B2Y(iGP, ii,jj) = B2Y(iGP, ii,jj) + quadWeights1D(jGP)  * 0.5 * Bath_quad(iGP,jGP,ii,jj)**2 * Gravity
         END DO
         B2Y(iGP, ii,jj) = B2Y(iGP, ii,jj) - 0.5 * Bath_interfaceY(1,iGP,ii,jj)**2 * Gravity
       END DO
@@ -823,15 +1161,15 @@ SUBROUTINE SourceTerms(t)
     DO jj=-nGhosts,nElemsX+1+nGhosts
       DO iGP=1,nGPs
         DO jGP=1,nGPs
-          S_int(2,jGP,ii,jj) = S(2,jGP,ii,jj) + WeightsGP(iGP) * Source_weights(2,iGP,jGP,ii,jj)
-          S_int(3,iGP,ii,jj) = S(3,iGP,ii,jj) + WeightsGP(jGP) * Source_weights(3,iGP,jGP,ii,jj)
+          S_int(2,jGP,ii,jj) = S_int(2,jGP,ii,jj) + WeightsGP(iGP,jGP) * Source_weights(2,iGP,jGP,ii,jj)
+          S_int(3,iGP,ii,jj) = S_int(3,iGP,ii,jj) + WeightsGP(iGP,jGP) * Source_weights(3,iGP,jGP,ii,jj)
         ENDDO
       ENDDO
       DO jGP=1,nGPs
-        S_int(2,jGP,ii,jj) = S(2,jGP,ii,jj) - 0.5 * Gravity * ( Bath_interfaceX(2,jGP,ii,jj)**2 - Bath_interfaceX(1,jGP,ii,jj)**2 ) / MESH_DX(1)
+        S_int(2,jGP,ii,jj) = S_int(2,jGP,ii,jj) - 0.5 * Gravity * ( Bath_interfaceX(2,jGP,ii,jj)**2 - Bath_interfaceX(1,jGP,ii,jj)**2 ) / MESH_DX(1)
       ENDDO
       DO iGP=1,nGPs
-        S_int(3,iGP,ii,jj) = S(3,iGP,ii,jj) - 0.5 * Gravity * ( Bath_interfaceY(2,iGP,ii,jj)**2 - Bath_interfaceY(1,iGP,ii,jj)**2 ) / MESH_DX(2)
+        S_int(3,iGP,ii,jj) = S_int(3,iGP,ii,jj) - 0.5 * Gravity * ( Bath_interfaceY(2,iGP,ii,jj)**2 - Bath_interfaceY(1,iGP,ii,jj)**2 ) / MESH_DX(2)
       ENDDO
     ENDDO
   ENDDO
@@ -978,6 +1316,7 @@ END SUBROUTINE SourceInterpIntegralCoeff
       USE MOD_FiniteVolume2D_vars,ONLY: MeshBary
       USE MOD_FiniteVolume2D_vars,ONLY: MeshGP
       USE MOD_FiniteVolume2D_vars,ONLY: WeightsGP
+      USE MOD_FiniteVolume2D_vars,ONLY: quadWeights1D
       USE MOD_FiniteVolume2D_vars,ONLY: nElemsX
       USE MOD_FiniteVolume2D_vars,ONLY: nElemsY
       USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
@@ -1050,10 +1389,7 @@ END SUBROUTINE SourceInterpIntegralCoeff
                      END DO
                      DO jGP=1,nGPs
                         S_in_qp(1:nVar,jGP,iGP,ii,jj) = SourceFunc( Vtemp2(1:nVar,jGP,iGP,ii,jj) , MeshGP(:,ii,jj,jGP,iGP)  )
-                     END DO
-                  END DO
-               END DO
-            END DO
+                     END DOWeightsGP
           CASE(7)
             DO iVar=1,nVar
                DO jj=1,nElemsY
@@ -1097,6 +1433,316 @@ END SUBROUTINE SourceInterpIntegralCoeff
 !===============================================================================!
 !
 #endif
+
+!===============================================================================!
+!
+!
+!
+!===============================================================================!
+REAL FUNCTION Bathymetry(X)
+!-------------------------------------------------------------------------------!
+USE MOD_FiniteVolume2D_vars,ONLY: nDims
+USE MOD_FiniteVolume2D_vars,ONLY: PI
+USE MOD_FiniteVolume2D_vars,ONLY: BathymetryFlag
+IMPLICIT NONE
+REAL, DIMENSION(1:nDims) , INTENT(IN)  :: X
+REAL                            :: r2, distance, radius, d, beta, x0
+REAL, dimension(1:nDims)        :: xc
+
+SELECT CASE (BathymetryFlag)
+  CASE (1) ! used for *LAKE AT REST
+    Bathymetry = 0.1 * SIN(2.*PI*X(1)) * COS(2.*PI*X(2))
+
+  CASE(2) ! used for *PERTURBATION ANALYSIS ON WET-DRY LAKE AT REST and *WAVE OVER DRY ISLAND
+    r2=X(1)**2. + X(2)**2.
+    IF (r2<1.) THEN
+      Bathymetry = EXP(1.0-1.0/(1.0-r2))
+    ELSE
+      Bathymetry = 0.0
+    ENDIF
+
+  CASE(21) ! used for *PERTURBATION ANALYSIS ON WET-DRY LAKE AT REST and *WAVE OVER DRY ISLAND 1D-LIKE
+    r2=X(1)**2.
+    IF (r2<1.) THEN
+      Bathymetry = EXP(1.0-1.0/(1.0-r2))
+    ELSE
+      Bathymetry = 0.0
+    ENDIF
+
+
+  CASE(3)
+    r2 = abs(X(1) - 10.)
+    IF ( r2 < 5 ) THEN
+      Bathymetry = 0.2 * EXP( 1.0 - 1.0/(1.0-(r2/5.)**2) )
+    ELSE
+      Bathymetry = 0.0
+    ENDIF
+
+  CASE(4)
+    r2 = (X(1) - 12.5)
+    Bathymetry = 0.05 * SIN(r2)*EXP( 1.0 - r2**2)
+
+  CASE(5)
+    IF (x(1)<0.d0) THEN
+      Bathymetry = 0.2d0 * (x(1)+5.d0)
+    ELSE IF (x(1)<3.d0) THEN
+      Bathymetry = 1.0d0 !0.2d0 * 5.0d0
+    ELSE
+      Bathymetry = 1.0d0  + (x(1)-3.0d0)*0.4d0
+    END IF
+
+    ! 1st palace
+    !IF ( (x(1) .LE. 1.5d0 ) .AND. (x(1).GE.1.d0) .AND. (x(2).LE.-1.d0) .AND. (x(2).GE.-1.5d0)  ) THEN
+    xc = (/ 1.0d0, -1.d0 /)
+    distance = SQRT(SUM((x-xc)**2))
+    radius = 0.5d0
+    IF ( distance < radius ) THEN
+      Bathymetry = cone(distance, radius, 1.d0, 4.d0 )
+      ! Bathymetry = 4.0d0
+    END IF
+
+    ! 2nd palace
+    ! IF ( (x(1) .LE. 1.5d0 ) .AND. (x(1).GE.1.d0) .AND. (x(2).LE.1.5d0) .AND. (x(2).GE.1.d0)  ) THEN
+    xc = (/ 1.0d0, 1.d0 /)
+    distance = SQRT(SUM((x-xc)**2))
+    radius = 0.5d0
+    IF ( distance < radius ) THEN
+      Bathymetry = cone(distance, radius, 1.d0, 4.d0 )
+      ! Bathymetry = 4.0d0
+    END IF
+
+    ! 3rd palace
+    xc = (/ 2.d0, 0.d0 /)
+    distance = SQRT(SUM((x-xc)**2))
+    radius = 0.5d0
+    IF ( distance < radius ) THEN
+      Bathymetry = cone(distance, radius, 1.0d0, 4.d0 )
+      ! Bathymetry = 4.0d0
+    END IF
+
+  CASE(8) ! used for *SOLITARY WAVE ON CONICAL ISLAND
+    xc = (/ 12.5d0, 15.d0 /)
+    r2 = sqrt( (X(1)-xc(1))**2 + (X(2)-xc(2))**2 )
+
+    IF (r2 <= 1.1) THEN
+      Bathymetry =  0.625 
+    ELSE IF (r2 <= 3.6) THEN
+      Bathymetry = (3.6-r2)/4.0 
+    ELSE
+      Bathymetry = 0.0
+    ENDIF
+
+
+  CASE(10) ! RUN UP
+    d = 1.
+    beta = -1.0/19.85   ! y=-d y=beta x0 = -d   
+    x0 = -d/beta
+    IF (x(1) >= x0) THEN
+      Bathymetry =  -d
+    ELSE
+      Bathymetry = x(1)*beta  ! 10/19.85 \sim 0.5
+    ENDIF
+
+
+  CASE DEFAULT
+   Bathymetry = 0.
+END SELECT
+
+!-------------------------------------------------------------------------------!
+END FUNCTION Bathymetry
+!===============================================================================!
+!
+!
+!
+!===============================================================================!
+REAL FUNCTION Bathymetry_X(X)
+!-------------------------------------------------------------------------------!
+USE MOD_FiniteVolume2D_vars,ONLY: nDims
+USE MOD_FiniteVolume2D_vars,ONLY: PI
+USE MOD_FiniteVolume2D_vars,ONLY: BathymetryFlag
+IMPLICIT NONE
+REAL, DIMENSION(1:nDims) , INTENT(IN)  :: X
+REAL                                   :: r2, distance, radius, d, beta, x0
+REAL, DIMENSION(1:nDims)               :: xc
+
+SELECT CASE (BathymetryFlag)
+  CASE (1) ! used for *LAKE AT REST
+    Bathymetry_X = 0.1 * 2. * PI * COS(2.*PI*X(1)) * COS(2.*PI*X(2))
+
+  CASE(2) ! used for *PERTURBATION ANALYSIS ON WET-DRY LAKE AT REST and *WAVE OVER DRY ISLAND
+    r2=X(1)**2. + X(2)**2.
+    IF (r2<1) THEN
+      Bathymetry_X = -2.0*X(1)/(1.0-r2)**2.*EXP(1.0-1.0/(1.0-r2))
+    ELSE
+      Bathymetry_X = 0.0
+    ENDIF
+
+  CASE(3)
+    r2 = abs(X(1) - 10.)
+    IF ( r2 < 5 ) THEN
+      Bathymetry_X = - 0.2 * EXP( 1.0 - 1.0/(1.0-(r2/5.)**2) ) * ( 2.0*(X(1)-10.0)/25.0/(1.-(r2/5.)**2)**2 )
+    ELSE
+      Bathymetry_X = 0.0
+    ENDIF
+
+  CASE(4)
+    r2 = (X(1) - 12.5)
+    Bathymetry_X = 0.05*(cos(r2)*exp(1. - (r2)**2)) - 0.05*(sin(r2)*exp(1. - (r2)**2)*2.*r2)
+
+  CASE(5)
+    IF (x(1)<0.d0) THEN
+      Bathymetry_X = 0.2d0 
+    ELSE IF (x(1)<3.d0) THEN
+      Bathymetry_X = 0.0d0 !0.2d0 * 5.0d0
+    ELSE
+      Bathymetry_X = 0.4d0
+    END IF
+
+    ! 1st palace
+    !IF ( (x(1) .LE. 1.5d0 ) .AND. (x(1).GE.1.d0) .AND. (x(2).LE.-1.d0) .AND. (x(2).GE.-1.5d0)  ) THEN
+    xc = (/ 1.0d0, -1.d0 /)
+    distance = SQRT(SUM((x-xc)**2))
+    radius = 0.5d0
+    IF ( distance < radius ) THEN
+      Bathymetry_X = cone_der(distance, radius, 1.d0, 4.d0 ) * 2.d0*(x(1)-xc(1))
+      ! Bathymetry_X = 4.0d0
+    END IF
+
+    ! 2nd palace
+    ! IF ( (x(1) .LE. 1.5d0 ) .AND. (x(1).GE.1.d0) .AND. (x(2).LE.1.5d0) .AND. (x(2).GE.1.d0)  ) THEN
+    xc = (/ 1.0d0, 1.d0 /)
+    distance = SQRT(SUM((x-xc)**2))
+    radius = 0.5d0
+    IF ( distance < radius ) THEN
+      Bathymetry_X = cone_der(distance, radius, 1.d0, 4.d0 ) * 2.d0*(x(1)-xc(1))
+      ! Bathymetry_X = 4.0d0
+    END IF
+
+    ! 3rd palace
+    xc = (/ 2.d0, 0.d0 /)
+    distance = SQRT(SUM((x-xc)**2))
+    radius = 0.5d0
+    IF ( distance < radius ) THEN
+      Bathymetry_X = cone_der(distance, radius, 1.0d0, 4.d0 ) * 2.d0*(x(1)-xc(1))
+      ! Bathymetry_X = 4.0d0
+    END IF
+
+  CASE(8)
+    xc = (/ 12.5d0, 15.d0 /)
+    distance = SQRT(SUM((x-xc)**2))
+    radius = 3.6
+
+
+    IF ( (distance < radius) .and. (distance > 1.1d0) ) THEN
+      Bathymetry_X = cone_der(distance, radius, 0d0 , 3.6/4.0) * 2.d0*(x(1)-xc(1))
+    ELSE
+      Bathymetry_X = 0d0 
+    END IF
+
+  CASE(10) ! RUN UP
+    d = 1.0
+    beta = -1.0/19.85   ! y=-d y=beta x0 = -d   
+    x0 = -d/beta
+    IF (x(1) >= x0) THEN
+      Bathymetry_X =  0.
+    ELSE
+      Bathymetry_X = beta  ! 10/19.85 \sim 0.5
+    ENDIF
+
+  CASE DEFAULT
+   Bathymetry_X = 0.
+END SELECT
+
+!-------------------------------------------------------------------------------!
+END FUNCTION Bathymetry_X
+!===============================================================================!
+!
+!
+!
+!===============================================================================!
+REAL FUNCTION Bathymetry_Y(X)
+!-------------------------------------------------------------------------------!
+USE MOD_FiniteVolume2D_vars,ONLY: nDims
+USE MOD_FiniteVolume2D_vars,ONLY: PI
+USE MOD_FiniteVolume2D_vars,ONLY: BathymetryFlag
+IMPLICIT NONE
+REAL, DIMENSION(1:nDims) , INTENT(IN)  :: X
+REAL                                   :: r2, distance, radius
+REAL, DIMENSION(1:nDims)               :: xc
+
+SELECT CASE (BathymetryFlag)
+  CASE (1) ! used for *LAKE AT REST
+    Bathymetry_Y = - 0.1 * 2. * PI * SIN(2.*PI*X(1)) * SIN(2.*PI*X(2))
+
+  CASE(2) ! used for *PERTURBATION ANALYSIS ON WET-DRY LAKE AT REST and *WAVE OVER DRY ISLAND
+    r2=X(1)**2.+X(2)**2.
+    IF (r2<1) THEN
+      Bathymetry_Y = -2.0*X(2)/(1.0-r2)**2.*EXP(1.0-1.0/(1.0-r2))
+    ELSE
+      Bathymetry_Y = 0.0
+    ENDIF
+
+  CASE(3)
+      Bathymetry_Y = 0.0
+
+  CASE(4)
+      Bathymetry_Y = 0.0
+
+  CASE(5)
+      Bathymetry_Y = 0.d0
+  
+      ! 1st palace
+      !IF ( (x(1) .LE. 1.5d0 ) .AND. (x(1).GE.1.d0) .AND. (x(2).LE.-1.d0) .AND. (x(2).GE.-1.5d0)  ) THEN
+      xc = (/ 1.0d0, -1.d0 /)
+      distance = SQRT(SUM((x-xc)**2))
+      radius = 0.5d0
+      IF ( distance < radius ) THEN
+        Bathymetry_Y = cone_der(distance, radius, 1.d0, 4.d0 ) * 2.d0*(x(2)-xc(2))
+        ! Bathymetry_Y = 4.0d0
+      END IF
+  
+      ! 2nd palace
+      ! IF ( (x(1) .LE. 1.5d0 ) .AND. (x(1).GE.1.d0) .AND. (x(2).LE.1.5d0) .AND. (x(2).GE.1.d0)  ) THEN
+      xc = (/ 1.0d0, 1.d0 /)
+      distance = SQRT(SUM((x-xc)**2))
+      radius = 0.5d0
+      IF ( distance < radius ) THEN
+        Bathymetry_Y = cone_der(distance, radius, 1.d0, 4.d0 ) * 2.d0*(x(2)-xc(2))
+        ! Bathymetry_Y = 4.0d0
+      END IF
+  
+      ! 3rd palace
+      xc = (/ 2.d0, 0.d0 /)
+      distance = SQRT(SUM((x-xc)**2))
+      radius = 0.5d0
+      IF ( distance < radius ) THEN
+        Bathymetry_Y = cone_der(distance, radius, 1.0d0, 4.d0 ) * 2.d0*(x(2)-xc(2))
+        ! Bathymetry_Y = 4.0d0
+      END IF
+
+  CASE(8)
+    xc = (/ 12.5d0, 15.d0 /)
+    distance = SQRT(SUM((x-xc)**2))
+    radius = 3.6
+
+
+    IF ( (distance < radius) .and. (distance > 1.1d0) ) THEN
+      Bathymetry_Y = cone_der(distance, radius, 0d0 , 3.6/4.0) * 2.d0*(x(2)-xc(2))
+    ELSE
+      Bathymetry_Y = 0d0 
+    END IF
+
+  CASE(10)
+    Bathymetry_Y = 0.0
+  CASE DEFAULT
+   Bathymetry_Y = 0.
+END SELECT
+
+!-------------------------------------------------------------------------------!
+END FUNCTION Bathymetry_Y
+!===============================================================================!
+!
+!
 !
 !
 !===============================================================================!
@@ -1117,8 +1763,8 @@ END SUBROUTINE SourceInterpIntegralCoeff
 #endif
 #ifdef EqnShallowWater
       S(1) = 0.
-      S(2) = 0. ! -Q(1)*Bathymetry_X(X)
-      S(3) = 0. ! -Q(1)*Bathymetry_Y(X)
+      S(2) = -Q(1)*Bathymetry_X(X)
+      S(3) = -Q(1)*Bathymetry_Y(X)
 #endif
 #ifdef EqnAcoustics
       S(1) = 0. ! mass source
@@ -2188,10 +2834,12 @@ SUBROUTINE RiemannSolver(ConsL,ConsR,NormVect,TangVect,Flux)
       USE MOD_FiniteVolume2D_vars,ONLY: nVar
       USE MOD_FiniteVolume2D_vars,ONLY: nGPs
       USE MOD_FiniteVolume2D_vars,ONLY: nDims
-      USE MOD_FiniteVolume2D_vars,ONLY: Gmm
       USE MOD_FiniteVolume2D_vars,ONLY: WhichRiemannSolver
       USE exact_riemann_mod,      ONLY: exact_riemann
       USE exact_riemann_mod,      ONLY: sample
+#ifdef EqnEuler
+      USE MOD_FiniteVolume2D_vars,ONLY: Gmm
+#endif
 #ifdef SW
       USE MOD_FiniteVolume2D_vars,ONLY: Kappa
 #endif
@@ -2230,15 +2878,14 @@ SUBROUTINE RiemannSolver(ConsL,ConsR,NormVect,TangVect,Flux)
 
       DO iGP=1,nGPs
          ! Rotating the vector quantities       !
-         ConsLL(1,iGP) = ConsL(1,iGP)
+         ConsLL(1:nVar,iGP) = ConsL(1:nVar,iGP)
          ConsLL(2,iGP) = NormVect(1,iGP)*ConsL(2,iGP) + NormVect(2,iGP)*ConsL(3,iGP)
          ConsLL(3,iGP) = TangVect(1,iGP)*ConsL(2,iGP) + TangVect(2,iGP)*ConsL(3,iGP)
-         ConsLL(4,iGP) = ConsL(4,iGP)
+         
 
-         ConsRR(1,iGP) = ConsR(1,iGP)
+         ConsRR(1:nVar,iGP) = ConsR(1:nVar,iGP)
          ConsRR(2,iGP) = NormVect(1,iGP)*ConsR(2,iGP) + NormVect(2,iGP)*ConsR(3,iGP)
          ConsRR(3,iGP) = TangVect(1,iGP)*ConsR(2,iGP) + TangVect(2,iGP)*ConsR(3,iGP)
-         ConsRR(4,iGP) = ConsR(4,iGP)
 
          CALL ConsToPrim(ConsLL(1:nVar,iGP),PrimLL(1:nVar,iGP))
          CALL ConsToPrim(ConsRR(1:nVar,iGP),PrimRR(1:nVar,iGP))
@@ -2317,11 +2964,13 @@ SUBROUTINE RiemannSolverCorner(FluxBL,FluxBR,FluxTR,FluxTL,&
 USE MOD_FiniteVolume2D_vars,ONLY: nVar
 USE MOD_FiniteVolume2D_vars,ONLY: nGPs
 USE MOD_FiniteVolume2D_vars,ONLY: nDims
-USE MOD_FiniteVolume2D_vars,ONLY: Gmm
 USE MOD_FiniteVolume2D_vars,ONLY: WhichRiemannSolver
 USE MOD_FiniteVolume2D_vars,ONLY: MESH_DX
 USE exact_riemann_mod,      ONLY: exact_riemann
 USE exact_riemann_mod,      ONLY: sample
+#ifdef EqnEuler
+USE MOD_FiniteVolume2D_vars,ONLY: Gmm
+#endif
 #ifdef SW
 USE MOD_FiniteVolume2D_vars,ONLY: Kappa
 #endif
@@ -2401,10 +3050,6 @@ SELECT CASE(WhichRiemannSolver)
     PRINT*, "Riemann Solver was", WhichRiemannSolver
     STOP
   END SELECT
-
-  ! Rotating back the momentum components
-  Flux(2:3,iGP) = NormVect(1:nDims,iGP)*Flux(2,iGP) &
-    + TangVect(1:nDims,iGP)*Flux(3,iGP)
 
 !-------------------------------------------------------------------------------!
 END SUBROUTINE RiemannSolverCorner
@@ -2517,7 +3162,7 @@ STOP
 #ifdef EqnShallowWater
   USE MOD_FiniteVolume2D_vars,ONLY: Gravity
 #endif
--------------------------------------------------------------------------------!
+!-------------------------------------------------------------------------------!
   IMPLICIT NONE
   REAL,INTENT(IN)  :: Cons(1:nVar)
   REAL             :: max_eig 
@@ -2584,10 +3229,33 @@ END FUNCTION  max_eigenvalue
 
 !-------------------------------------------------------------------------------!
    END SUBROUTINE RiemannSolverByRusanov
+
 !===============================================================================!
 !
 !
 !
 !===============================================================================!
+REAL FUNCTION cone(distance, radius, min_height, max_height)
+!-------------------------------------------------------------------------------!
+REAL, INTENT(IN)               :: distance, min_height, max_height, radius
+
+cone  = (radius-distance)/radius*(max_height-min_height)+min_height
+
+END FUNCTION
+!-------------------------------------------------------------------------------!
+
+!-------------------------------------------------------------------------------!
+REAL FUNCTION cone_der(distance, radius, min_height, max_height)
+!-------------------------------------------------------------------------------!
+REAL, INTENT(IN)  :: distance, min_height, max_height, radius
+
+cone_der  = -1.0d0/radius*(max_height-min_height)
+
+END FUNCTION
+!-------------------------------------------------------------------------------!
+!
+!
+!
+!-------------------------------------------------------------------------------!
 END MODULE MOD_Equation
 !-------------------------------------------------------------------------------!

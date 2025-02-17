@@ -162,6 +162,334 @@ SELECT CASE(InitialCondition)
     BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
     source_flag = 0       
 #endif
+
+#ifdef EqnShallowWater
+  CASE(1) !*UNSTEADY SMOOTH VORTEX
+    TEnd    = 0.1
+    Gravity = 9.81
+    nElemsX = 120
+    nElemsY = nElemsX
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/3.0,3.0/)
+    BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
+    BathymetryFlag = 0
+
+  CASE(2) !*LAKE AT REST
+    TEnd    = 0.1
+    Gravity = 9.81
+    nElemsX = 10
+    nElemsY = nElemsX
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/1.0,1.0/)
+    BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
+    BathymetryFlag = 1
+
+  CASE(20) !*LAKE AT REST PERTURBED
+    TEnd    = 0.1
+    Gravity = 9.81
+    nElemsX = 10
+    nElemsY = nElemsX
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/1.0,1.0/)
+    BoundaryConditionsType = (/1,1,1,1/) !*PERIODIC BCs
+    BathymetryFlag = 1
+
+  CASE(21) ! *PERTURBATION ANALYSIS ON WET LAKE AT REST NON-SMOOTH
+    TEnd    = 0.5
+    Gravity = 9.8
+    nElemsX = 400
+    nElemsY = 120
+    MESH_X0 = (/-5.0,-2.0/)
+    MESH_X1 = (/5.0,2.0/)
+    BoundaryConditionsType = (/1,1,1,1/)
+    BathymetryFlag = 2
+
+
+  CASE(3) ! *WET-DRY LAKE AT REST
+    TEnd    = 1.0
+    Gravity = 9.8
+    ! nElemsX = 400
+    ! nElemsY = 120
+    ! MESH_X0 = (/-5.0,-2.0/)
+    ! MESH_X1 = (/5.0,2.0/)
+    nElemsX = 25
+    nElemsY = 25
+    MESH_X0 = (/-5.0,-5.0/)
+    MESH_X1 = (/5.0,5.0/)
+    BoundaryConditionsType = (/1,1,1,1/)
+    BathymetryFlag = 2
+
+  CASE(30) ! *PERTURBATION ANALYSIS ON WET-DRY LAKE AT REST
+    TEnd    = 1.0
+    Gravity = 9.8
+    ! nElemsX = 400
+    ! nElemsY = 120
+    ! MESH_X0 = (/-5.0,-2.0/)
+    ! MESH_X1 = (/5.0,2.0/)
+    nElemsX = 50
+    nElemsY = 50
+    MESH_X0 = (/-5.0,-5.0/)
+    MESH_X1 = (/5.0,5.0/)
+    BoundaryConditionsType = (/1,1,1,1/)
+    BathymetryFlag = 2
+
+
+  CASE(31) ! *PERTURBATION ANALYSIS ON WET-DRY LAKE AT REST 1D-LIKE
+    TEnd    = 1.0
+    Gravity = 9.8
+    ! nElemsX = 400
+    ! nElemsY = 120
+    ! MESH_X0 = (/-5.0,-2.0/)
+    ! MESH_X1 = (/5.0,2.0/)
+    nElemsX = 50
+    nElemsY = 5
+    MESH_X0 = (/-5.0,-5.0/)
+    MESH_X1 = (/5.0,5.0/)
+    BoundaryConditionsType = (/1,1,1,1/)
+    BathymetryFlag = 21
+
+  CASE(4) ! *CIRCULAR DAM BREAK 1
+    TEnd    = 1.0
+    Gravity = 9.8
+    nElemsX = 100
+    nElemsY = 100
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/40.0,40.0/)
+    BoundaryConditionsType = (/1,1,1,1/)
+    BathymetryFlag = 0
+
+  CASE(5) ! *CIRCULAR DAM BREAK 2
+    TEnd    = 1.0
+    Gravity = 9.8
+    nElemsX = 200
+    nElemsY = 200
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/50.0,50.0/)
+    BoundaryConditionsType = (/1,1,1,1/)
+    BathymetryFlag = 0
+
+  CASE(6) ! *WAVE OVER DRY ISLAND
+    TEnd    = 1.0
+    Gravity = 9.8
+    nElemsX = 200!400
+    nElemsY = 60 !120
+    MESH_X0 = (/-5.0,-2.0/)
+    MESH_X1 = (/5.0,2.0/)
+    BoundaryConditionsType = (/1,1,1,1/)
+    BathymetryFlag = 2
+
+
+  CASE(7) ! *WAVE TSUNAMI
+    TEnd    = 3.0
+    Gravity = 9.8
+    nElemsX = 960 !240!480  !960
+    nElemsY = 320 !80 !160  !320
+    MESH_X0 = (/-5.0,-2.0/)
+    MESH_X1 = (/7.0,2.0/)
+    BoundaryConditionsType = (/4,2,4,3/)
+    BathymetryFlag = 5
+
+  CASE(8) ! *SOLITARY WAVE ON CONICAL ISLAND
+    TEnd    = 40.0
+    Gravity = 9.81
+    nElemsX = 125
+    nElemsY = 150 
+    MESH_X0 = (/ 0.0 , 0.0/)
+    MESH_X1 = (/ 25.0 , 30.0/)
+    BoundaryConditionsType = (/2,2,2,3/)
+    BathymetryFlag = 8
+
+
+
+  CASE(10) ! *RUN UP BP04 : H_over_d=0.3
+    TEnd    = 30.0
+    Gravity = 1.0
+    nElemsX = 400
+    nElemsY = 5 
+    MESH_X0 = (/ -10.0 , 0.0/)
+    MESH_X1 = (/ 40.0 , (50.0/nElemsX)*nElemsY /)
+    ! BoundaryConditionsType = (/1,2,1,4/)
+    BoundaryConditionsType = (/4,2,4,4/)
+    BathymetryFlag = 10
+
+
+  CASE(11) ! *RUN UP BP04 : H_over_d=0.3
+    TEnd    = 70.0
+    Gravity = 1.0
+    nElemsX = 400
+    nElemsY = 5 
+    MESH_X0 = (/ -10.0 , 0.0/)
+    MESH_X1 = (/ 80.0 , (90.0/nElemsX)*nElemsY /)
+    ! BoundaryConditionsType = (/1,2,1,4/)
+    BoundaryConditionsType = (/4,2,4,4/)
+    BathymetryFlag = 10
+
+  !*----------------------------------------
+  !*Lakes at rest 40-41-42-43
+  !*with bump bathymetry 2
+  !*domain [-5,5]x[-2,2]
+  !*----------------------------------------
+  !*->40 Wet unperturbed
+  !*->41 Wet perturbed
+  !*->42 Wet-Dry unperturbed
+  !*->43 Wet-Dry perturbed
+  !*----------------------------------------
+  CASE(40)
+    TEnd    = 1.0
+    Gravity = 9.8
+    nElemsX = 100
+    nElemsY = 30
+    MESH_X0 = (/-5.0,-2.0/)
+    MESH_X1 = (/5.0,2.0/)
+    BoundaryConditionsType = (/1,1,1,1/)
+    BathymetryFlag = 2
+  CASE(41)
+    TEnd    = 1.0
+    Gravity = 9.8
+    nElemsX = 100
+    nElemsY = 30
+    MESH_X0 = (/-5.0,-2.0/)
+    MESH_X1 = (/5.0,2.0/)
+    BoundaryConditionsType = (/1,1,1,1/)
+    BathymetryFlag = 2
+  CASE(42)
+    TEnd    = 1.0
+    Gravity = 9.8
+    nElemsX = 100
+    nElemsY = 30
+    MESH_X0 = (/-5.0,-2.0/)
+    MESH_X1 = (/5.0,2.0/)
+    BoundaryConditionsType = (/1,1,1,1/)
+    BathymetryFlag = 2
+  CASE(43)
+    TEnd    = 1.0
+    Gravity = 9.8
+    nElemsX = 100
+    nElemsY = 40 
+    MESH_X0 = (/-5.0,-2.0/)
+    MESH_X1 = (/5.0,2.0/)
+    BoundaryConditionsType = (/1,1,1,1/)
+    BathymetryFlag = 2
+  !*----------------------------------------
+
+
+
+
+  
+  CASE(150) ! supercritical flow (Kurganov)
+    TEnd    = 50.0
+    Gravity = 9.812
+    nElemsY = 2
+    nElemsX = 25*nElemsY
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/25.0,1.0/)
+    BoundaryConditionsType = (/1,2,1,3/) ! inflow - trasmissive
+    BathymetryFlag = 4
+
+  CASE(350) ! supercritical flow (Kurganov)
+    TEnd    = 50.0
+    Gravity = 9.812
+    nElemsY = 100
+    nElemsX = 250
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/25.0,10.0/)
+    BoundaryConditionsType = (/1,2,1,3/) ! inflow - trasmissive
+    BathymetryFlag = 4  
+  CASE(450) ! supercritical flow (Kurganov) perturbation
+    TEnd    = 1.0
+    Gravity = 9.812
+    nElemsY = 100
+    nElemsX = 250
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/25.0,10.0/)
+    BoundaryConditionsType = (/1,2,1,3/) ! inflow - trasmissive
+    BathymetryFlag = 4
+
+
+  CASE(151) ! subcritical flow (Kurganov)
+    TEnd    = 200.0
+    Gravity = 9.812
+    nElemsY = 10
+    nElemsX = 25*nElemsY
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/25.0,1.0/)
+    BoundaryConditionsType = (/1,3,1,3/) ! inflow - outflow
+    BathymetryFlag = 4
+
+  CASE(351) ! subcritical flow (Kurganov)
+    TEnd    = 200.0
+    Gravity = 9.812
+    nElemsY = 100
+    nElemsX = 250
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/25.0,10.0/)
+    BoundaryConditionsType = (/1,3,1,3/) ! inflow - outflow
+    BathymetryFlag = 4
+
+
+  CASE(451) ! subcritical flow (Kurganov)
+    TEnd    = 1.0
+    Gravity = 9.812
+    nElemsY = 100
+    nElemsX = 250
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/25.0,10.0/)
+    BoundaryConditionsType = (/1,3,1,3/) ! inflow - outflow
+    BathymetryFlag = 4
+
+  CASE(152) ! transcritical no shock
+    TEnd    = 200.0
+    Gravity = 9.812
+    nElemsY = 10
+    nElemsX = 25*nElemsY
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/25.0,1.0/)
+    BoundaryConditionsType = (/1,3,1,3/) ! inflow - outflow
+    BathymetryFlag = 4
+
+  CASE(352) ! transcritical no shock
+    TEnd    = 200.0
+    Gravity = 9.812
+    nElemsY = 100
+    nElemsX = 250
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/25.0,10.0/)
+    BoundaryConditionsType = (/1,3,1,3/) ! inflow - outflow
+    BathymetryFlag = 4
+
+
+  CASE(153) ! transcritical shock
+    TEnd    = 200.0
+    Gravity = 9.812
+    nElemsY = 10
+    nElemsX = 25*nElemsY
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/25.0,1.0/)
+    BoundaryConditionsType = (/1,3,1,3/) ! inflow - outflow
+    BathymetryFlag = 4
+
+  CASE(250) ! supercritical flow (Kurganov) with perturbation
+    TEnd    = 1.0
+    Gravity = 9.812
+    nElemsY = 2
+    nElemsX = 25*nElemsY
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/25.0,1.0/)
+    BoundaryConditionsType = (/1,2,1,3/) ! inflow - trasmissive
+    BathymetryFlag = 4
+
+  CASE(251) ! subcritical flow (Kurganov) with perturbation
+    TEnd    = 1.0
+    Gravity = 9.812
+    nElemsY = 10
+    nElemsX = 25*nElemsY
+    MESH_X0 = (/0.0,0.0/)
+    MESH_X1 = (/25.0,1.0/)
+    BoundaryConditionsType = (/1,3,1,3/) ! inflow - outflow
+    BathymetryFlag = 4
+
+#endif
+
 #ifdef EqnAcoustics
 
 #endif

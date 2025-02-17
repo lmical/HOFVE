@@ -40,6 +40,7 @@ REAL,ALLOCATABLE    :: MeshNodes(:,:,:)
 REAL,ALLOCATABLE    :: MeshBary(:,:,:)
 REAL,ALLOCATABLE    :: MeshGP(:,:,:,:,:)
 REAL,ALLOCATABLE    :: WeightsGP(:,:)
+REAL,ALLOCATABLE    :: quadWeights1D(:)
 REAL,ALLOCATABLE    :: WeightsGPBnd(:)
 REAL,ALLOCATABLE    :: NormVectX(:,:,:,:)
 REAL,ALLOCATABLE    :: NormVectY(:,:,:,:)
@@ -81,10 +82,10 @@ INTEGER             :: WhichOutput
 INTEGER             :: nOutputFiles
 INTEGER             :: InitialCondition
 INTEGER             :: BoundaryConditionsType(4)
-REAL, ALLOCATABLE   :: PrimRefState1(:)
-REAL, ALLOCATABLE   :: PrimRefState2(:)
-REAL, ALLOCATABLE   :: PrimRefState3(:)
-REAL, ALLOCATABLE   :: PrimRefState4(:)
+REAL                :: PrimRefState1(1:nVar)
+REAL                :: PrimRefState2(1:nVar)
+REAL                :: PrimRefState3(1:nVar)
+REAL                :: PrimRefState4(1:nVar)
 
 REAL                :: t
 REAL                :: tGlobal
@@ -96,7 +97,14 @@ REAL                :: tEnd
 REAL                :: LambdaMaxX
 REAL                :: LambdaMaxY
 
+#ifdef EqnEuler
 INTEGER             :: source_flag
+#endif
+
+#ifdef EqnShallowWater
+INTEGER             :: BathymetryFlag
+#endif
+
 
 #ifdef GFWENO
 REAL, ALLOCATABLE   :: FFX(:,:,:) ! \int^y FX + RX
@@ -153,12 +161,14 @@ INTEGER,PARAMETER   :: WENOEXP = 2.0
 REAL,PARAMETER      :: PI           = ACOS(-1.0)
 REAL,PARAMETER      :: EPS          = 1.0E-6
 REAL,PARAMETER      :: ACCURACY     = 1.0E-30
-REAL,PARAMETER      :: MIN_POSITIVE_VAR    = 1.0E-6
+REAL,PARAMETER      :: MIN_POSITIVE_VAR  = 1.0E-12
 REAL,PARAMETER      :: MIN_SPEED    = 0.0
 REAL,PARAMETER      :: MIN_TIMESTEP = 1.0E-30
 
 
-CHARACTER(LEN=255), ALLOCATABLE  :: VarNameVisu(:)
+
+
+CHARACTER(LEN=255)  :: VarNameVisu(1:nVar+1)
 
 
 

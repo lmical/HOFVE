@@ -84,11 +84,30 @@ USE MOD_FiniteVolume2D_vars,ONLY: Ua
 USE MOD_FiniteVolume2D_vars,ONLY: FUp
 USE MOD_FiniteVolume2D_vars,ONLY: Gravitational_Potential_Averages
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGP
+USE MOD_FiniteVolume2D_vars,ONLY: quadWeights1D
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGPBnd
 USE MOD_FiniteVolume2D_vars,ONLY: timescheme 
 USE MOD_FiniteVolume2D_vars,ONLY: maxTimeSteps 
 USE MOD_FiniteVolume2D_vars,ONLY: MStepsMax
 
+#ifdef GFWENO
+USE MOD_FiniteVolume2D_vars,ONLY: FFX
+USE MOD_FiniteVolume2D_vars,ONLY: FFY
+USE MOD_FiniteVolume2D_vars,ONLY: RX
+USE MOD_FiniteVolume2D_vars,ONLY: RY
+USE MOD_FiniteVolume2D_vars,ONLY: RX_interface
+USE MOD_FiniteVolume2D_vars,ONLY: RY_interface
+USE MOD_FiniteVolume2D_vars,ONLY: FG
+USE MOD_FiniteVolume2D_vars,ONLY: FG_corner 
+USE MOD_FiniteVolume2D_vars,ONLY: FG_reconstructed_corner
+USE MOD_FiniteVolume2D_vars,ONLY: Cons_reconstructed_corner
+USE MOD_FiniteVolume2D_vars,ONLY: Eta
+USE MOD_FiniteVolume2D_vars,ONLY: Bath
+USE MOD_FiniteVolume2D_vars,ONLY: Bath_interfaceX
+USE MOD_FiniteVolume2D_vars,ONLY: Bath_interfaceY
+USE MOD_FiniteVolume2D_vars,ONLY: Eta_interfaceX
+USE MOD_FiniteVolume2D_vars,ONLY: Eta_interfaceY
+#endif
 
 #ifdef PATANKAR 
 USE MOD_FiniteVolume2D_vars,ONLY: NNZsparse
@@ -152,16 +171,12 @@ ALLOCATE(MeshNodes(1:nDims,       0:nElemsX,0:nElemsY))
 ALLOCATE(MeshBary (1:nDims,       1:nElemsX,1:nElemsY))
 ALLOCATE(MeshGP   (1:nDims,       1:nElemsX,1:nElemsY,1:nGPs,1:nGPs))
 ALLOCATE(WeightsGP(1:nGPs, 1:nGPs))
+ALLOCATE(quadWeights1D(1:nGPs))
 ALLOCATE(WeightsGPBnd(1:nGPs))
 ALLOCATE(NormVectX(1:nDims,1:nGPs,0:nElemsX,1:nElemsY))
 ALLOCATE(TangVectX(1:nDims,1:nGPs,0:nElemsX,1:nElemsY))
 ALLOCATE(NormVectY(1:nDims,1:nGPs,1:nElemsX,0:nElemsY))
 ALLOCATE(TangVectY(1:nDims,1:nGPs,1:nElemsX,0:nElemsY))
-ALLOCATE(PrimRefState1(1:nVar))
-ALLOCATE(PrimRefState2(1:nVar))
-ALLOCATE(PrimRefState3(1:nVar))
-ALLOCATE(PrimRefState4(1:nVar))
-ALLOCATE(VarNameVisu(1:nVar+1))
 
 ALLOCATE( U(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1))
 ALLOCATE( V(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1))
@@ -345,6 +360,10 @@ USE MOD_FiniteVolume2D_vars,ONLY: WeightsGP
 USE MOD_Equation,           ONLY: Gravitational_Potential   
 USE MOD_FiniteVolume2D_vars,ONLY: Gravitational_Potential_Averages
 #endif
+#ifdef EqnShallowWater
+USE MOD_Equation,           ONLY: Bathymetry   
+USE MOD_FiniteVolume2D_vars,ONLY: Bath
+#endif
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -354,6 +373,7 @@ IMPLICIT NONE
 !-------------------------------------------------------------------------------!
 REAL, DIMENSION(nVar, nGPs, nGPs) :: Utemp
 REAL, DIMENSION(nGPs, nGPs)       :: GravPottemp
+REAL, DIMENSION(nGPs, nGPs)       :: Bathtemp
 INTEGER :: ii, jj, iGP, jGP
 !-------------------------------------------------------------------------------!
 
@@ -369,6 +389,11 @@ DO jj=1,nElemsY
         CALL ExactFunction(&
           InitialCondition,0.0,MeshGP(:,ii,jj,iGP,jGP),Utemp(1:nVar,iGP,jGP))
         U(1:nVar, ii, jj) = U(1:nVar, ii, jj) + WeightsGP(iGP,jGP) * Utemp(1:nVar,iGP,jGP)
+
+#ifdef EqnShallowWater
+        Bathtemp(iGP,jGP) = Bathymetry(MeshGP(:,ii,jj,iGP,jGP))
+        Bath(ii,jj)    = Bath(ii,jj) + WeightsGP(iGP,jGP) * Bathtemp(iGP,jGP)
+#endif
 
 #ifdef EqnEuler
         ! compute cell average of bathymetry            
@@ -751,9 +776,6 @@ IMPLICIT NONE
 INTEGER :: ii, jj, iGP
 !-------------------------------------------------------------------------------!
 
-FX    = 0.0
-FluxX = 0.0
-
 DO jj=0,nElemsY
   DO ii=0,nElemsX
     ! Reconstructing corner ii+1/2,jj+1/2
@@ -944,7 +966,27 @@ USE MOD_FiniteVolume2D_vars,ONLY: FUp
 USE MOD_FiniteVolume2D_vars,ONLY: Gravitational_Potential_Averages
 #endif
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGP
+USE MOD_FiniteVolume2D_vars,ONLY: quadWeights1D
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGPBnd
+
+#ifdef GFWENO
+USE MOD_FiniteVolume2D_vars,ONLY: FFX
+USE MOD_FiniteVolume2D_vars,ONLY: FFY
+USE MOD_FiniteVolume2D_vars,ONLY: RX
+USE MOD_FiniteVolume2D_vars,ONLY: RY
+USE MOD_FiniteVolume2D_vars,ONLY: RX_interface
+USE MOD_FiniteVolume2D_vars,ONLY: RY_interface
+USE MOD_FiniteVolume2D_vars,ONLY: FG
+USE MOD_FiniteVolume2D_vars,ONLY: FG_corner 
+USE MOD_FiniteVolume2D_vars,ONLY: FG_reconstructed_corner
+USE MOD_FiniteVolume2D_vars,ONLY: Cons_reconstructed_corner
+USE MOD_FiniteVolume2D_vars,ONLY: Eta
+USE MOD_FiniteVolume2D_vars,ONLY: Bath
+USE MOD_FiniteVolume2D_vars,ONLY: Bath_interfaceX
+USE MOD_FiniteVolume2D_vars,ONLY: Bath_interfaceY
+USE MOD_FiniteVolume2D_vars,ONLY: Eta_interfaceX
+USE MOD_FiniteVolume2D_vars,ONLY: Eta_interfaceY
+#endif
 
 #ifdef PATANKAR 
 USE MOD_FiniteVolume2D_vars,ONLY: NNZsparse
@@ -969,6 +1011,7 @@ DEALLOCATE(MeshNodes)
 DEALLOCATE(MeshBary)
 DEALLOCATE(MeshGP)
 DEALLOCATE(WeightsGP)
+DEALLOCATE(quadWeights1D)
 DEALLOCATE(WeightsGPBnd)
 DEALLOCATE(NormVectX)
 DEALLOCATE(TangVectX)
@@ -991,11 +1034,7 @@ DEALLOCATE(K2)
 DEALLOCATE(K3)
 DEALLOCATE(K4)
 DEALLOCATE(K5)
-DEALLOCATE(PrimRefState1)
-DEALLOCATE(PrimRefState2)
-DEALLOCATE(PrimRefState3)
-DEALLOCATE(PrimRefState4)
-DEALLOCATE(VarNameVisu)
+
 
 #ifdef GFWENO
 DEALLOCATE(FFX)

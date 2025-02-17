@@ -22,12 +22,8 @@ MODULE MOD_Reconstruction
    END INTERFACE
 
 #ifdef GFWENO
-
    INTERFACE ReconstructionXY_Global
       MODULE PROCEDURE ReconstructionXY_Global
-   END INTERFACE
-   INTERFACE WENO_Global_1D_Eta
-      MODULE PROCEDURE WENO_Global_1D_Eta
    END INTERFACE
 #endif
 
@@ -53,6 +49,22 @@ MODULE MOD_Reconstruction
 
    INTERFACE VAMUSCL
       MODULE PROCEDURE VAMUSCL
+   END INTERFACE
+
+   INTERFACE WENO1_FirstSweep
+      MODULE PROCEDURE WENO1_FirstSweep
+   END INTERFACE
+
+   INTERFACE WENO3_FirstSweep
+      MODULE PROCEDURE WENO3_FirstSweep
+   END INTERFACE
+
+   INTERFACE WENO5_FirstSweep
+      MODULE PROCEDURE WENO5_FirstSweep
+   END INTERFACE
+
+   INTERFACE WENO7_FirstSweep
+      MODULE PROCEDURE WENO7_FirstSweep
    END INTERFACE
 
    INTERFACE WENO1_SecondSweep
@@ -88,14 +100,16 @@ MODULE MOD_Reconstruction
    PUBLIC :: ReconstructionFixX
    PUBLIC :: ReconstructionFixY
    PUBLIC :: MUSCL
+   PUBLIC :: WENO1_FirstSweep
+   PUBLIC :: WENO3_FirstSweep
+   PUBLIC :: WENO5_FirstSweep
+   PUBLIC :: WENO7_FirstSweep
    PUBLIC :: WENO1_SecondSweep
    PUBLIC :: WENO3_SecondSweep
    PUBLIC :: WENO5_SecondSweep
    PUBLIC :: WENO7_SecondSweep
 #ifdef GFWENO
-   PUBLIC :: ReconstructionEtaGlobal
    PUBLIC :: ReconstructionXY_Global
-   PUBLIC :: WENO_Global_1D_Eta
 #endif
 ! PUBLIC :: WENO9_SecondSweep
 ! PUBLIC :: WENO11_SecondSweep
@@ -641,11 +655,13 @@ SUBROUTINE ReconstructionXY_Global()
 USE MOD_FiniteVolume2D_vars,ONLY: U
 USE MOD_FiniteVolume2D_vars,ONLY: nVar
 USE MOD_FiniteVolume2D_vars,ONLY: nElemsX
+USE MOD_FiniteVolume2D_vars,ONLY: nElemsY
 USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
 USE MOD_FiniteVolume2D_vars,ONLY: Eta
 USE MOD_FiniteVolume2D_vars,ONLY: Ind
 USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
 USE MOD_FiniteVolume2D_vars,ONLY: FG_reconstructed_corner
+USE MOD_FiniteVolume2D_vars,ONLY: FG
 USE MOD_FiniteVolume2D_vars,ONLY: Cons_reconstructed_corner
 !-------------------------------------------------------------------------------!
       IMPLICIT NONE
@@ -654,7 +670,7 @@ USE MOD_FiniteVolume2D_vars,ONLY: Cons_reconstructed_corner
 !-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
-INTEGER            :: ii, jj
+INTEGER            :: ii, jj, iVar
 REAL               :: tempL(nVar,0:nElemsX+1,-nGhosts:nElemsY+nGhosts+1)
 REAL               :: tempR(nVar,0:nElemsX+1,-nGhosts:nElemsY+nGhosts+1)
 CHARACTER(LEN=255) :: ErrorMessage
@@ -668,7 +684,7 @@ SELECT CASE (Reconstruction)
       DO jj=-nGhosts,nElemsY+nGhosts+1
           DO iVar=1,nVar
             CALL WENO1_FirstSweep(&
-                      FG(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+                      FG(iVar,ii-nGhosts:ii+nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
           END DO                  
       END DO
     END DO
@@ -693,7 +709,7 @@ SELECT CASE (Reconstruction)
       DO jj=-nGhosts,nElemsY+nGhosts+1
           DO iVar=1,nVar
             CALL WENO1_FirstSweep(&
-                      U(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+                      U(iVar,ii-nGhosts:ii+nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
           END DO                  
       END DO
     END DO
@@ -718,7 +734,7 @@ SELECT CASE (Reconstruction)
       DO jj=-nGhosts,nElemsY+nGhosts+1
           DO iVar=1,nVar
             CALL WENO3_FirstSweep(&
-                      FG(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+                      FG(iVar,ii-nGhosts:ii+nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
           END DO                  
       END DO
     END DO
@@ -743,7 +759,7 @@ SELECT CASE (Reconstruction)
       DO jj=-nGhosts,nElemsY+nGhosts+1
           DO iVar=1,nVar
             CALL WENO3_FirstSweep(&
-                      U(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+                      U(iVar,ii-nGhosts:ii+nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
           END DO                  
       END DO
     END DO
@@ -768,7 +784,7 @@ SELECT CASE (Reconstruction)
       DO jj=-nGhosts,nElemsY+nGhosts+1
           DO iVar=1,nVar
             CALL WENO5_FirstSweep(&
-                      FG(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+                      FG(iVar,ii-nGhosts:ii+nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
           END DO                  
       END DO
     END DO
@@ -793,7 +809,7 @@ SELECT CASE (Reconstruction)
       DO jj=-nGhosts,nElemsY+nGhosts+1
           DO iVar=1,nVar
             CALL WENO5_FirstSweep(&
-                      U(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+                      U(iVar,ii-nGhosts:ii+nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
           END DO                  
       END DO
     END DO
@@ -1140,8 +1156,8 @@ END SUBROUTINE ReconstructionXY_Global
                CALL WENO3_FirstSweep(&
                   V(iVar,-nGhosts:nGhosts,jj),VtempM(iVar,jj),VtempP(iVar,jj))
             END DO
-            CALL WENO3_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
-            CALL WENO3_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
+            CALL WENO3_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
+            CALL WENO3_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
          END DO
        CASE(4,5)
          DO iVar=1,nVar
@@ -1149,8 +1165,8 @@ END SUBROUTINE ReconstructionXY_Global
                CALL WENO5_FirstSweep(&
                   V(iVar,-nGhosts:nGhosts,jj),VtempM(iVar,jj),VtempP(iVar,jj))
             END DO
-            CALL WENO5_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
-            CALL WENO5_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
+            CALL WENO5_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
+            CALL WENO5_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
          END DO
        CASE(7)
          DO iVar=1,nVar
@@ -1158,8 +1174,8 @@ END SUBROUTINE ReconstructionXY_Global
                CALL WENO7_FirstSweep(&
                   V(iVar,-nGhosts:nGhosts,jj),VtempM(iVar,jj),VtempP(iVar,jj))
             END DO
-            CALL WENO7_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
-            CALL WENO7_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
+            CALL WENO7_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
+            CALL WENO7_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
          END DO
        CASE DEFAULT
          ErrorMessage = "Reconstruction not implemented"
@@ -1205,8 +1221,8 @@ END SUBROUTINE ReconstructionXY_Global
                CALL WENO3_FirstSweep(&
                   V(iVar,ii,-nGhosts:nGhosts),VtempM(iVar,ii),VtempP(iVar,ii))
             END DO
-            CALL WENO3_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
-            CALL WENO3_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
+            CALL WENO3_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
+            CALL WENO3_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
          END DO
        CASE(4,5)
          DO iVar=1,nVar
@@ -1214,8 +1230,8 @@ END SUBROUTINE ReconstructionXY_Global
                CALL WENO5_FirstSweep(&
                   V(iVar,ii,-nGhosts:nGhosts),VtempM(iVar,ii),VtempP(iVar,ii))
             END DO
-            CALL WENO5_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
-            CALL WENO5_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
+            CALL WENO5_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
+            CALL WENO5_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
          END DO
        CASE(7)
          DO iVar=1,nVar
@@ -1223,8 +1239,8 @@ END SUBROUTINE ReconstructionXY_Global
                CALL WENO7_FirstSweep(&
                   V(iVar,ii,-nGhosts:nGhosts),VtempM(iVar,ii),VtempP(iVar,ii))
             END DO
-            CALL WENO7_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
-            CALL WENO7_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
+            CALL WENO7_SecondSweep(VtempM(iVar,-nGhosts:nGhosts),VtempM(iVar,-nGhosts:nGhosts),WM(iVar,1:nGPs))
+            CALL WENO7_SecondSweep(VtempP(iVar,-nGhosts:nGhosts),VtempP(iVar,-nGhosts:nGhosts),WP(iVar,1:nGPs))
          END DO
        CASE DEFAULT
          ErrorMessage = "Reconstruction not implemented"
@@ -2059,7 +2075,7 @@ END SUBROUTINE WENO5_SecondSweep
 !
 !
 !===============================================================================!
-   SUBROUTINE WENO7_SecondSweep(Q,W) !4nGPS
+   SUBROUTINE WENO7_SecondSweep(Q,QCoeff,W) !4nGPS
 !-------------------------------------------------------------------------------!
       USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
       USE MOD_FiniteVolume2D_vars,ONLY: nGPs
@@ -2071,6 +2087,7 @@ END SUBROUTINE WENO5_SecondSweep
 ! >> FORMAL ARGUMENTS                                                           !
 !-------------------------------------------------------------------------------!
       REAL,INTENT(IN)  :: Q(-nGhosts:nGhosts)
+      REAL,INTENT(IN)  :: QCoeff(-nGhosts:nGhosts)
       REAL,INTENT(OUT) :: W(1:nGPs)
 !-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
@@ -2085,10 +2102,10 @@ END SUBROUTINE WENO5_SecondSweep
 !------------------------------!
 ! Common Smoothness Indicators !
 !------------------------------!
-      beta1 = +(2.27916666666666679*Q(-3)*Q(-3))+(-8.08750000000000036*Q(-3)*Q(-2))+(9.67083333333333250*Q(-3)*Q(-1))+(-3.86249999999999982*Q(-3)*Q(0))+(-8.08750000000000036*Q(-2)*Q(-3))+(29.34583333333333499*Q(-2)*Q(-2))+(-35.92916666666666714*Q(-2)*Q(-1))+(14.67083333333333250*Q(-2)*Q(0))+(9.67083333333333250*Q(-1)*Q(-3))+(-35.92916666666666714*Q(-1)*Q(-2))+(45.84583333333333144*Q(-1)*Q(-1))+(-19.58749999999999858*Q(-1)*Q(0))+(-3.86249999999999982*Q(0)*Q(-3))+(14.67083333333333250*Q(0)*Q(-2))+(-19.58749999999999858*Q(0)*Q(-1))+(8.77916666666666679*Q(0)*Q(0))
-      beta2 = +(1.11250000000000004*Q(-2)*Q(-2))+(-3.42083333333333339*Q(-2)*Q(-1))+(3.33749999999999991*Q(-2)*Q(0))+(-1.02916666666666656*Q(-2)*Q(1))+(-3.42083333333333339*Q(-1)*Q(-2))+(11.84583333333333321*Q(-1)*Q(-1))+(-12.42916666666666714*Q(-1)*Q(0))+(4.00416666666666643*Q(-1)*Q(1))+(3.33749999999999991*Q(0)*Q(-2))+(-12.42916666666666714*Q(0)*Q(-1))+(14.34583333333333321*Q(0)*Q(0))+(-5.25416666666666643*Q(0)*Q(1))+(-1.02916666666666656*Q(1)*Q(-2))+(4.00416666666666643*Q(1)*Q(-1))+(-5.25416666666666643*Q(1)*Q(0))+(2.27916666666666679*Q(1)*Q(1))
-      beta3 = +(2.27916666666666679*Q(-1)*Q(-1))+(-5.25416666666666643*Q(-1)*Q(0))+(4.00416666666666643*Q(-1)*Q(1))+(-1.02916666666666656*Q(-1)*Q(2))+(-5.25416666666666643*Q(0)*Q(-1))+(14.34583333333333321*Q(0)*Q(0))+(-12.42916666666666714*Q(0)*Q(1))+(3.33749999999999991*Q(0)*Q(2))+(4.00416666666666643*Q(1)*Q(-1))+(-12.42916666666666714*Q(1)*Q(0))+(11.84583333333333321*Q(1)*Q(1))+(-3.42083333333333339*Q(1)*Q(2))+(-1.02916666666666656*Q(2)*Q(-1))+(3.33749999999999991*Q(2)*Q(0))+(-3.42083333333333339*Q(2)*Q(1))+(1.11250000000000004*Q(2)*Q(2))
-      beta4 = +(8.77916666666666679*Q(0)*Q(0))+(-19.58749999999999858*Q(0)*Q(1))+(14.67083333333333250*Q(0)*Q(2))+(-3.86249999999999982*Q(0)*Q(3))+(-19.58749999999999858*Q(1)*Q(0))+(45.84583333333333144*Q(1)*Q(1))+(-35.92916666666666714*Q(1)*Q(2))+(9.67083333333333250*Q(1)*Q(3))+(14.67083333333333250*Q(2)*Q(0))+(-35.92916666666666714*Q(2)*Q(1))+(29.34583333333333499*Q(2)*Q(2))+(-8.08750000000000036*Q(2)*Q(3))+(-3.86249999999999982*Q(3)*Q(0))+(9.67083333333333250*Q(3)*Q(1))+(-8.08750000000000036*Q(3)*Q(2))+(2.27916666666666679*Q(3)*Q(3))
+      beta1 = +(2.27916666666666679*QCoeff(-3)*QCoeff(-3))+(-8.08750000000000036*QCoeff(-3)*QCoeff(-2))+(9.67083333333333250*QCoeff(-3)*QCoeff(-1))+(-3.86249999999999982*QCoeff(-3)*QCoeff(0))+(-8.08750000000000036*QCoeff(-2)*QCoeff(-3))+(29.34583333333333499*QCoeff(-2)*QCoeff(-2))+(-35.92916666666666714*QCoeff(-2)*QCoeff(-1))+(14.67083333333333250*QCoeff(-2)*QCoeff(0))+(9.67083333333333250*QCoeff(-1)*QCoeff(-3))+(-35.92916666666666714*QCoeff(-1)*QCoeff(-2))+(45.84583333333333144*QCoeff(-1)*QCoeff(-1))+(-19.58749999999999858*QCoeff(-1)*QCoeff(0))+(-3.86249999999999982*QCoeff(0)*QCoeff(-3))+(14.67083333333333250*QCoeff(0)*QCoeff(-2))+(-19.58749999999999858*QCoeff(0)*QCoeff(-1))+(8.77916666666666679*QCoeff(0)*QCoeff(0))
+      beta2 = +(1.11250000000000004*QCoeff(-2)*QCoeff(-2))+(-3.42083333333333339*QCoeff(-2)*QCoeff(-1))+(3.33749999999999991*QCoeff(-2)*QCoeff(0))+(-1.02916666666666656*QCoeff(-2)*QCoeff(1))+(-3.42083333333333339*QCoeff(-1)*QCoeff(-2))+(11.84583333333333321*QCoeff(-1)*QCoeff(-1))+(-12.42916666666666714*QCoeff(-1)*QCoeff(0))+(4.00416666666666643*QCoeff(-1)*QCoeff(1))+(3.33749999999999991*QCoeff(0)*QCoeff(-2))+(-12.42916666666666714*QCoeff(0)*QCoeff(-1))+(14.34583333333333321*QCoeff(0)*QCoeff(0))+(-5.25416666666666643*QCoeff(0)*QCoeff(1))+(-1.02916666666666656*QCoeff(1)*QCoeff(-2))+(4.00416666666666643*QCoeff(1)*QCoeff(-1))+(-5.25416666666666643*QCoeff(1)*QCoeff(0))+(2.27916666666666679*QCoeff(1)*QCoeff(1))
+      beta3 = +(2.27916666666666679*QCoeff(-1)*QCoeff(-1))+(-5.25416666666666643*QCoeff(-1)*QCoeff(0))+(4.00416666666666643*QCoeff(-1)*QCoeff(1))+(-1.02916666666666656*QCoeff(-1)*QCoeff(2))+(-5.25416666666666643*QCoeff(0)*QCoeff(-1))+(14.34583333333333321*QCoeff(0)*QCoeff(0))+(-12.42916666666666714*QCoeff(0)*QCoeff(1))+(3.33749999999999991*QCoeff(0)*QCoeff(2))+(4.00416666666666643*QCoeff(1)*QCoeff(-1))+(-12.42916666666666714*QCoeff(1)*QCoeff(0))+(11.84583333333333321*QCoeff(1)*QCoeff(1))+(-3.42083333333333339*QCoeff(1)*QCoeff(2))+(-1.02916666666666656*QCoeff(2)*QCoeff(-1))+(3.33749999999999991*QCoeff(2)*QCoeff(0))+(-3.42083333333333339*QCoeff(2)*QCoeff(1))+(1.11250000000000004*QCoeff(2)*QCoeff(2))
+      beta4 = +(8.77916666666666679*QCoeff(0)*QCoeff(0))+(-19.58749999999999858*QCoeff(0)*QCoeff(1))+(14.67083333333333250*QCoeff(0)*QCoeff(2))+(-3.86249999999999982*QCoeff(0)*QCoeff(3))+(-19.58749999999999858*QCoeff(1)*QCoeff(0))+(45.84583333333333144*QCoeff(1)*QCoeff(1))+(-35.92916666666666714*QCoeff(1)*QCoeff(2))+(9.67083333333333250*QCoeff(1)*QCoeff(3))+(14.67083333333333250*QCoeff(2)*QCoeff(0))+(-35.92916666666666714*QCoeff(2)*QCoeff(1))+(29.34583333333333499*QCoeff(2)*QCoeff(2))+(-8.08750000000000036*QCoeff(2)*QCoeff(3))+(-3.86249999999999982*QCoeff(3)*QCoeff(0))+(9.67083333333333250*QCoeff(3)*QCoeff(1))+(-8.08750000000000036*QCoeff(3)*QCoeff(2))+(2.27916666666666679*QCoeff(3)*QCoeff(3))
 
 !--------------------------------------------!
 ! Point: x_{j-1/2*sqrt(3/7+2/7*sqrt(6/5))}   !

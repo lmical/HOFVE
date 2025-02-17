@@ -43,13 +43,14 @@ USE MOD_FiniteVolume2D_vars,ONLY: MeshNodes
 USE MOD_FiniteVolume2D_vars,ONLY: MeshBary
 USE MOD_FiniteVolume2D_vars,ONLY: MeshGP   
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGP   
+USE MOD_FiniteVolume2D_vars,ONLY: quadWeights1D   
 USE MOD_FiniteVolume2D_vars,ONLY: WeightsGPBnd  
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
 ! Local Variables
 INTEGER :: ii, jj, iGP, jGP
-REAL, DIMENSION(nGPs) :: quadWeights1D, quadNodes1D 
+REAL, DIMENSION(nGPs) :: quadNodes1D 
 !-------------------------------------------------------------------------------!
 
 MeshNodes = 0.0
