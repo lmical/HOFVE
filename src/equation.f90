@@ -2421,18 +2421,24 @@ END SUBROUTINE RiemannSolverCorner
   FUNCTION JacobianX(Cons) RESULT(Jac_X)
 !-------------------------------------------------------------------------------!
   USE MOD_FiniteVolume2D_vars,ONLY: nVar
+#ifdef EqnEuler
+  USE MOD_FiniteVolume2D_vars,ONLY: Gmm
+#endif
+#ifdef EqnShallowWater
   USE MOD_FiniteVolume2D_vars,ONLY: Gravity
+#endif
 !-------------------------------------------------------------------------------!
   IMPLICIT NONE
   REAL,INTENT(IN)  :: Cons(1:nVar)
   REAL             :: Jac_X(1:nVar,1:nVar) 
+  REAL             :: h, hu, hv, ro, rou, rov, roE, u, v
  
   Jac_X = 0.0
 
 #ifdef EqnShallowWater 
-  h  = Cons(0)
-  hu = Cons(1)
-  hv = Cons(2)
+  h  = Cons(1)
+  hu = Cons(2)
+  hv = Cons(3)
 
   u=hu/h
   v=hv/h
@@ -2459,20 +2465,27 @@ STOP
   FUNCTION JacobianY(Cons) RESULT(Jac_Y)
 !-------------------------------------------------------------------------------!
   USE MOD_FiniteVolume2D_vars,ONLY: nVar
+#ifdef EqnEuler
+  USE MOD_FiniteVolume2D_vars,ONLY: Gmm
+#endif
+#ifdef EqnShallowWater
   USE MOD_FiniteVolume2D_vars,ONLY: Gravity
+#endif
+
 !-------------------------------------------------------------------------------!
   IMPLICIT NONE
   REAL,INTENT(IN)  :: Cons(1:nVar)
   REAL             :: Jac_Y(1:nVar,1:nVar) 
+  REAL             :: h, hu, hv, ro, rou, rov, roE, u, v
  
   Jac_Y = 0.0
 
 
 #ifdef EqnShallowWater 
 
-  h  = Cons(0)
-  hu = Cons(1)
-  hv = Cons(2)
+  h  = Cons(1)
+  hu = Cons(2)
+  hv = Cons(3)
 
   u=hu/h
   v=hv/h
@@ -2498,17 +2511,23 @@ STOP
   FUNCTION max_eigenvalue(Cons) RESULT(max_eig)
 !-------------------------------------------------------------------------------!
   USE MOD_FiniteVolume2D_vars,ONLY: nVar
+#ifdef EqnEuler
+  USE MOD_FiniteVolume2D_vars,ONLY: Gmm
+#endif
+#ifdef EqnShallowWater
   USE MOD_FiniteVolume2D_vars,ONLY: Gravity
-!-------------------------------------------------------------------------------!
+#endif
+-------------------------------------------------------------------------------!
   IMPLICIT NONE
   REAL,INTENT(IN)  :: Cons(1:nVar)
   REAL             :: max_eig 
+  REAL             :: h, hu, hv, ro, rou, rov, roE, u, v
 
 #ifdef EqnShallowWater 
 
-  h  = Cons(0)
-  hu = Cons(1)
-  hv = Cons(2)
+  h  = Cons(1)
+  hu = Cons(2)
+  hv = Cons(3)
 
   u=hu/h
   v=hv/h
@@ -2517,8 +2536,19 @@ STOP
 #endif
 
 #ifdef EqnEuler
-print *, "max_eig of Euler must be defined"
-STOP
+
+  ro  = Cons(1)
+  rou = Cons(2)
+  rov = Cons(3)
+  roE = Cons(4)
+
+  u=rou/h
+  v=rov/h
+
+  p = (roE-0.5*(u*u+v*v))*(Gmm-1.0)
+
+  max_eig = SQRT(u*u + v*v) + SQRT(Gmm*p/ro)
+
 #endif
 END FUNCTION  max_eigenvalue
 !===============================================================================!
