@@ -81,10 +81,10 @@ INTEGER             :: WhichOutput
 INTEGER             :: nOutputFiles
 INTEGER             :: InitialCondition
 INTEGER             :: BoundaryConditionsType(4)
-REAL                :: PrimRefState1(1:nVar)
-REAL                :: PrimRefState2(1:nVar)
-REAL                :: PrimRefState3(1:nVar)
-REAL                :: PrimRefState4(1:nVar)
+REAL, ALLOCATABLE   :: PrimRefState1(:)
+REAL, ALLOCATABLE   :: PrimRefState2(:)
+REAL, ALLOCATABLE   :: PrimRefState3(:)
+REAL, ALLOCATABLE   :: PrimRefState4(:)
 
 REAL                :: t
 REAL                :: tGlobal
@@ -158,7 +158,7 @@ REAL,PARAMETER      :: MIN_SPEED    = 0.0
 REAL,PARAMETER      :: MIN_TIMESTEP = 1.0E-30
 
 
-CHARACTER(LEN=255)  :: VarNameVisu(1:nVar+1)
+CHARACTER(LEN=255), ALLOCATABLE  :: VarNameVisu(:)
 
 
 

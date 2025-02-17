@@ -48,6 +48,7 @@ MAIN_LIB = libmain.a
 # FCFLAGS += -I. -DSW
 #FCFLAGS += -I. -DWELLBALANCED
 #FCFLAGS += -I. -DPATANKAR
+FCFLAGS += -I. -DGFWENO
 #--------------------------------------------------------------------------------------------------#
 SRC = $(shell cat sources.mk)
 OBJ = $(SRC:.f90=.o)
