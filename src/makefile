@@ -45,7 +45,11 @@ BLAS_LAPACK = -llapack -lblas
 #--------------------------------------------------------------------------------------------------#
 MAIN_LIB = libmain.a
 #--------------------------------------------------------------------------------------------------#
-# FCFLAGS += -I. -DSW
+# FCFLAGS += -I. -DSW  # OLD and work with also EqnEuler
+FCFLAGS += -I. -DEqnEuler
+# FCFLAGS += -I. -DEqnShallowWater
+# FCFLAGS += -I. -DEqnAcoustic
+
 #FCFLAGS += -I. -DWELLBALANCED
 #FCFLAGS += -I. -DPATANKAR
 #--------------------------------------------------------------------------------------------------#
