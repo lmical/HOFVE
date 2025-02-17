@@ -13,10 +13,6 @@ INTERFACE ExactFunctionWB
   MODULE PROCEDURE ExactFunctionWB
 END INTERFACE
 
-INTERFACE GlobalFluxTerms
-  MODULE PROCEDURE GlobalFluxTerms
-END INTERFACE
-
 INTERFACE SourceTerms
   MODULE PROCEDURE SourceTerms
 END INTERFACE
@@ -50,6 +46,10 @@ INTERFACE Gravitational_Potential
 END INTERFACE
 
 #ifdef GFWENO
+INTERFACE GlobalFluxTerms
+  MODULE PROCEDURE GlobalFluxTerms
+END INTERFACE
+
 INTERFACE RiemannSolverCorner
   MODULE PROCEDURE RiemannSolverCorner
 END INTERFACE
@@ -2367,11 +2367,11 @@ Cons_aver(1:nVar) = 0.25*(ConsBL(1:nVar)+ConsBR(1:nVar)+ConsTR(1:nVar)+ConsTL(1:
 Jump_Cons(1:nVar) = ConsBL(1:nVar)-ConsBR(1:nVar)-ConsTL(1:nVar)+ConsTR(1:nVar)
 
 Central_Flux(1:nVar) = 0.25*(FluxBL(1:nVar)+FluxBR(1:nVar)+FluxTR(1:nVar)+FluxTL(1:nVar))
-Jump_Flux(1:nVar) = FluxBL(1:nVar)-FluxBR(1:nVar)+FluxTR(1:nVar)-FluxTL(1:nVar)
+Jump_Flux(1:nVar)    = FluxBL(1:nVar)-FluxBR(1:nVar)+FluxTR(1:nVar)-FluxTL(1:nVar)
 
 SELECT CASE(WhichRiemannSolver)
   CASE(1) !*Rusanov
-    s_max = problem.max_eigenvalue(Cons_aver)
+    s_max = max_eigenvalue(Cons_aver)
 
 
     NumFluxBL(1:nVar) = +( Central_Flux(1:nVar)) + MESH_DX(1)* s_max* (ConsBL(1:nVar)-Cons_aver(1:nVar))   
@@ -2382,10 +2382,10 @@ SELECT CASE(WhichRiemannSolver)
 #ifdef EqnShallowWater 
   CASE(3) !* SUPG
     
-    JX = problem.JacobianX(q_aver)
-    JY = problem.JacobianY(q_aver)
+    JX = JacobianX(Cons_aver)
+    JY = JacobianY(Cons_aver)
     
-    s_max = problem.max_eigenvalue(Cons_aver)
+    s_max = max_eigenvalue(Cons_aver)
 
     tau = C * 1./s_max   /4.
 
@@ -2456,7 +2456,118 @@ END SUBROUTINE RiemannSolverCorner
 !===============================================================================!
 !
 !
+!
+!===============================================================================!
 #endif
+!===============================================================================!
+!
+!
+!===============================================================================!
+  FUNCTION JacobianX(Cons) RESULT(Jac_X)
+!-------------------------------------------------------------------------------!
+  USE MOD_FiniteVolume2D_vars,ONLY: nVar
+  USE MOD_FiniteVolume2D_vars,ONLY: Gravity
+!-------------------------------------------------------------------------------!
+  IMPLICIT NONE
+  REAL,INTENT(IN)  :: Cons(1:nVar)
+  REAL             :: Jac_X(1:nVar,1:nVar) 
+ 
+  Jac_X = 0.0
+
+#ifdef EqnShallowWater 
+  h  = Cons(0)
+  hu = Cons(1)
+  hv = Cons(2)
+
+  u=hu/h
+  v=hv/h
+
+  Jac_X(1,2) = 1.
+  Jac_X(2,1) = -u**2 +Gravity*h
+  Jac_X(2,2) = 2*u
+  Jac_X(3,1) = -u*v
+  Jac_X(3,2) =  v
+  Jac_X(3,3) =  u
+#endif
+
+#ifdef EqnEuler
+print *, "Jacobians of Euler must be defined"
+STOP
+#endif
+
+
+  END FUNCTION JacobianX
+!===============================================================================!
+!
+!
+!===============================================================================!
+  FUNCTION JacobianY(Cons) RESULT(Jac_Y)
+!-------------------------------------------------------------------------------!
+  USE MOD_FiniteVolume2D_vars,ONLY: nVar
+  USE MOD_FiniteVolume2D_vars,ONLY: Gravity
+!-------------------------------------------------------------------------------!
+  IMPLICIT NONE
+  REAL,INTENT(IN)  :: Cons(1:nVar)
+  REAL             :: Jac_Y(1:nVar,1:nVar) 
+ 
+  Jac_Y = 0.0
+
+
+#ifdef EqnShallowWater 
+
+  h  = Cons(0)
+  hu = Cons(1)
+  hv = Cons(2)
+
+  u=hu/h
+  v=hv/h
+
+  Jac_Y(1,3) = 1.
+  Jac_Y(3,1) = -v**2 +Gravity*h
+  Jac_Y(3,3) = 2*v
+  Jac_Y(2,1) = -u*v
+  Jac_Y(2,2) =  v
+  Jac_Y(2,3) =  u
+#endif
+
+#ifdef EqnEuler
+print *, "Jacobians of Euler must be defined"
+STOP
+#endif
+
+  END FUNCTION JacobianY
+!===============================================================================!
+!
+!
+!===============================================================================!
+  FUNCTION max_eigenvalue(Cons) RESULT(max_eig)
+!-------------------------------------------------------------------------------!
+  USE MOD_FiniteVolume2D_vars,ONLY: nVar
+  USE MOD_FiniteVolume2D_vars,ONLY: Gravity
+!-------------------------------------------------------------------------------!
+  IMPLICIT NONE
+  REAL,INTENT(IN)  :: Cons(1:nVar)
+  REAL             :: max_eig 
+
+#ifdef EqnShallowWater 
+
+  h  = Cons(0)
+  hu = Cons(1)
+  hv = Cons(2)
+
+  u=hu/h
+  v=hv/h
+
+  max_eig = SQRT(u*u + v*v) + SQRT(Gravity*h)
+#endif
+
+#ifdef EqnEuler
+print *, "max_eig of Euler must be defined"
+STOP
+#endif
+END FUNCTION  max_eigenvalue
+!===============================================================================!
+!
 !
 !===============================================================================!
    SUBROUTINE RiemannSolverByRusanov(ConsL,ConsR,PrimL,PrimR,Flux)

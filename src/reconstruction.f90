@@ -712,6 +712,107 @@ SELECT CASE (Reconstruction)
       END DO
     END DO
 
+ CASE(3)
+    ! Reconstruct F+G global flux in corners
+    DO ii=0,nElemsX+1 
+      DO jj=-nGhosts,nElemsY+nGhosts+1
+          DO iVar=1,nVar
+            CALL WENO3_FirstSweep(&
+                      FG(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+          END DO                  
+      END DO
+    END DO
+
+    DO ii=0,nElemsX+1 
+      DO jj=0,nElemsY+1
+          DO iVar=1,nVar
+            CALL WENO3_FirstSweep(&
+                      tempL(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      FG_reconstructed_corner(iVar,1,1,ii,jj),FG_reconstructed_corner(iVar,1,2,ii,jj))
+            CALL WENO3_FirstSweep(&
+                      tempR(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      FG_reconstructed_corner(iVar,2,1,ii,jj),FG_reconstructed_corner(iVar,2,2,ii,jj))
+
+          END DO                  
+      END DO
+    END DO
+
+    ! Reconstruct conservative variables in corners
+    ! I'm not sure if I should reconstruct Eta instead of h...
+    DO ii=0,nElemsX+1 
+      DO jj=-nGhosts,nElemsY+nGhosts+1
+          DO iVar=1,nVar
+            CALL WENO3_FirstSweep(&
+                      U(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+          END DO                  
+      END DO
+    END DO
+
+    DO ii=0,nElemsX+1 
+      DO jj=0,nElemsY+1
+          DO iVar=1,nVar
+            CALL WENO3_FirstSweep(&
+                      tempL(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      Cons_reconstructed_corner(iVar,1,1,ii,jj),Cons_reconstructed_corner(iVar,1,2,ii,jj))
+            CALL WENO3_FirstSweep(&
+                      tempR(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      Cons_reconstructed_corner(iVar,2,1,ii,jj),Cons_reconstructed_corner(iVar,2,2,ii,jj))
+
+          END DO                  
+      END DO
+    END DO
+
+ CASE(4)
+    ! Reconstruct F+G global flux in corners
+    DO ii=0,nElemsX+1 
+      DO jj=-nGhosts,nElemsY+nGhosts+1
+          DO iVar=1,nVar
+            CALL WENO5_FirstSweep(&
+                      FG(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+          END DO                  
+      END DO
+    END DO
+
+    DO ii=0,nElemsX+1 
+      DO jj=0,nElemsY+1
+          DO iVar=1,nVar
+            CALL WENO5_FirstSweep(&
+                      tempL(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      FG_reconstructed_corner(iVar,1,1,ii,jj),FG_reconstructed_corner(iVar,1,2,ii,jj))
+            CALL WENO5_FirstSweep(&
+                      tempR(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      FG_reconstructed_corner(iVar,2,1,ii,jj),FG_reconstructed_corner(iVar,2,2,ii,jj))
+
+          END DO                  
+      END DO
+    END DO
+
+    ! Reconstruct conservative variables in corners
+    ! I'm not sure if I should reconstruct Eta instead of h...
+    DO ii=0,nElemsX+1 
+      DO jj=-nGhosts,nElemsY+nGhosts+1
+          DO iVar=1,nVar
+            CALL WENO5_FirstSweep(&
+                      U(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+          END DO                  
+      END DO
+    END DO
+
+    DO ii=0,nElemsX+1 
+      DO jj=0,nElemsY+1
+          DO iVar=1,nVar
+            CALL WENO5_FirstSweep(&
+                      tempL(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      Cons_reconstructed_corner(iVar,1,1,ii,jj),Cons_reconstructed_corner(iVar,1,2,ii,jj))
+            CALL WENO5_FirstSweep(&
+                      tempR(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      Cons_reconstructed_corner(iVar,2,1,ii,jj),Cons_reconstructed_corner(iVar,2,2,ii,jj))
+
+          END DO                  
+      END DO
+    END DO
+
+
 
   CASE DEFAULT
     ErrorMessage = "Reconstruction not implemented"
