@@ -174,13 +174,14 @@ ALLOCATE(Ind(1:2,0:nElemsX+1,0:nElemsY+1))
 #ifdef GFWENO
 ALLOCATE(FFX(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^y FX + RX
 ALLOCATE(FFY(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^x FY + RY
-ALLOCATE( RX(1:nGPs,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^x SX
-ALLOCATE( RY(1:nGPs,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^y SY
-ALLOCATE( RX_interface(1:2,1:nGPs,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1)) 
-ALLOCATE( RY_interface(1:2,1:nGPs,nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))   
+ALLOCATE(RX(1:nGPs,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^x SX
+ALLOCATE(RY(1:nGPs,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \int^y SY
+ALLOCATE(RX_interface(1:2,1:nGPs,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1)) 
+ALLOCATE(RY_interface(1:2,1:nGPs,nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))   
 ALLOCATE(FG(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! FFX + FFY
-ALLOCATE(FG_corner(1:nVar,0:nElemsX,0:nElemsY)) 
+ALLOCATE(FG_corner(1:nVar,1:2,1:2, 1:nElemsX, 1:nElemsY))  ! The distribution of corners contribution is given by 4 terms that sums up to 0 
 ALLOCATE(FG_reconstructed_corner(1:nVar,1:2,1:2,0:nElemsX+1,0:nElemsY+1)) 
+ALLOCATE(Cons_reconstructed_corner(1:nVar,1:2,1:2,0:nElemsX+1,0:nElemsY+1)) 
 ALLOCATE(Eta(-2*nGhosts:nElemsX+2*nGhosts+1,-2*nGhosts:nElemsY+2*nGhosts+1))
 ALLOCATE(Bath(-2*nGhosts:nElemsX+2*nGhosts+1,-2*nGhosts-1:nElemsY+2*nGhosts+1))
 ALLOCATE(Bath_interfaceX(1:2,1:nGPs,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))
@@ -597,7 +598,10 @@ DO jj=1,nElemsY
 
 #ifdef GFWENO
 
-    Ut(1:nVar,ii,jj) = -( FG_corner(1:nVar,ii-1,jj-1) - FG_corner(1:nVar,ii-1,jj+0) - FG_corner(1:nVar,ii+0,jj-1) + FG_corner(1:nVar,ii+0,jj+0) )/Mesh_DX(1)/Mesh_DX(2)
+    Ut(1:nVar,ii,jj) = -( FG_corner(1:nVar,1,1,ii,jj) &
+                        + FG_corner(1:nVar,1,2,ii,jj) &
+                        + FG_corner(1:nVar,2,1,ii,jj) &
+                        + FG_corner(1:nVar,2,2,ii,jj) )/Mesh_DX(1)/Mesh_DX(2)
 
 #else
     Ut(1:nVar,ii,jj) = S(1:nVar,ii,jj) &
@@ -714,6 +718,62 @@ END DO
 END SUBROUTINE NumericalFluxFY
 !===============================================================================!
 !
+#ifdef GFWENO
+!
+!===============================================================================!
+SUBROUTINE NumericalFluxFG_Global()
+!-------------------------------------------------------------------------------!
+USE MOD_Equation,           ONLY: RiemannSolver
+USE MOD_FiniteVolume2D_vars,ONLY: nDims
+USE MOD_FiniteVolume2D_vars,ONLY: nVar
+USE MOD_FiniteVolume2D_vars,ONLY: nElemsX
+USE MOD_FiniteVolume2D_vars,ONLY: nElemsY
+USE MOD_FiniteVolume2D_vars,ONLY: nGPs
+USE MOD_FiniteVolume2D_vars,ONLY: FG_reconstructed_corner
+USE MOD_FiniteVolume2D_vars,ONLY: Cons_reconstructed_corner
+USE MOD_FiniteVolume2D_vars,ONLY: FG_corner
+USE MOD_FiniteVolume2D_vars,ONLY: FluxX
+USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
+USE MOD_FiniteVolume2D_vars,ONLY: NormVectX, TangVectX
+USE MOD_FiniteVolume2D_vars,ONLY: WeightsGPBnd
+!-------------------------------------------------------------------------------!
+IMPLICIT NONE
+!-------------------------------------------------------------------------------!
+! >> FORMAL ARGUMENTS                                                           !
+!-------------------------------------------------------------------------------!
+! >> LOCAL VARIABLES                                                            !
+!-------------------------------------------------------------------------------!
+INTEGER :: ii, jj, iGP
+!-------------------------------------------------------------------------------!
+
+FX    = 0.0
+FluxX = 0.0
+
+DO jj=0,nElemsY
+  DO ii=0,nElemsX
+    ! Reconstructing corner ii+1/2,jj+1/2
+    CALL RiemannSolverCorner(&
+      FG_reconstructed_corner(1:nVar,2,2,ii+0,jj+0),&
+      FG_reconstructed_corner(1:nVar,1,2,ii+1,jj+0),&
+      FG_reconstructed_corner(1:nVar,1,1,ii+1,jj+1),&
+      FG_reconstructed_corner(1:nVar,2,1,ii+0,jj+1),&
+      Cons_reconstructed_corner(1:nVar,2,2,ii+0,jj+0),&
+      Cons_reconstructed_corner(1:nVar,1,2,ii+1,jj+0),&
+      Cons_reconstructed_corner(1:nVar,1,1,ii+1,jj+1),&
+      Cons_reconstructed_corner(1:nVar,2,1,ii+0,jj+1),&
+      FG_corner(1:nVar,2,2,ii+0,jj+0),&
+      FG_corner(1:nVar,1,2,ii+1,jj+0),&
+      FG_corner(1:nVar,1,1,ii+1,jj+1),&
+      FG_corner(1:nVar,2,1,ii+0,jj+1))
+  END DO
+END DO
+
+!-------------------------------------------------------------------------------!
+END SUBROUTINE NumericalFluxFG_Global
+!===============================================================================!
+!
+!
+#endif
 !
 !
 !===============================================================================!
@@ -928,19 +988,22 @@ DEALLOCATE(K4)
 DEALLOCATE(K5)
 
 #ifdef GFWENO
-DEALLOCATE(FFX) ! \int^y FX + RX
-DEALLOCATE(FFY) ! \int^x FY + RY
-DEALLOCATE(RX) ! \int^x SX
-DEALLOCATE(RY) ! \int^y SY
-DEALLOCATE(RX_interface) 
-DEALLOCATE(RY_interface)   
-DEALLOCATE(FG) ! FFX + FFY
-DEALLOCATE(FG_corner) 
+DEALLOCATE(FFX)
+DEALLOCATE(FFY)
+DEALLOCATE(RX)
+DEALLOCATE(RY)
+DEALLOCATE(RX_interface)
+DEALLOCATE(RY_interface)
+DEALLOCATE(FG)
+DEALLOCATE(FG_corner)
+DEALLOCATE(FG_reconstructed_corner)
+DEALLOCATE(Cons_reconstructed_corner)
 DEALLOCATE(Eta)
-DEALLOCATE(Eta_interfaceX)
-DEALLOCATE(Eta_interfaceY)
+DEALLOCATE(Bath)
 DEALLOCATE(Bath_interfaceX)
 DEALLOCATE(Bath_interfaceY)
+DEALLOCATE(Eta_interfaceX)
+DEALLOCATE(Eta_interfaceY)
 #endif
 
 

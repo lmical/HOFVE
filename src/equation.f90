@@ -1,66 +1,75 @@
 !===============================================================================!
 MODULE MOD_Equation
 !-------------------------------------------------------------------------------!
-   IMPLICIT NONE
+IMPLICIT NONE
 !-------------------------------------------------------------------------------!
-   PRIVATE
+PRIVATE
 !-------------------------------------------------------------------------------!
-   INTERFACE ExactFunction
-      MODULE PROCEDURE ExactFunction
-   END INTERFACE
+INTERFACE ExactFunction
+  MODULE PROCEDURE ExactFunction
+END INTERFACE
 
-   INTERFACE ExactFunctionWB
-      MODULE PROCEDURE ExactFunctionWB
-   END INTERFACE
+INTERFACE ExactFunctionWB
+  MODULE PROCEDURE ExactFunctionWB
+END INTERFACE
 
-   INTERFACE GlobalFluxTerms
-      MODULE PROCEDURE GlobalFluxTerms
-   END INTERFACE
+INTERFACE GlobalFluxTerms
+  MODULE PROCEDURE GlobalFluxTerms
+END INTERFACE
 
-   INTERFACE SourceTerms
-      MODULE PROCEDURE SourceTerms
-   END INTERFACE
+INTERFACE SourceTerms
+  MODULE PROCEDURE SourceTerms
+END INTERFACE
 
-   INTERFACE BoundaryConditions
-      MODULE PROCEDURE BoundaryConditions
-   END INTERFACE
+INTERFACE BoundaryConditions
+  MODULE PROCEDURE BoundaryConditions
+END INTERFACE
 
-   INTERFACE TimeStep
-      MODULE PROCEDURE TimeStep
-   END INTERFACE
+INTERFACE TimeStep
+  MODULE PROCEDURE TimeStep
+END INTERFACE
 
-   INTERFACE RiemannSolver
-      MODULE PROCEDURE RiemannSolver
-   END INTERFACE
+INTERFACE RiemannSolver
+  MODULE PROCEDURE RiemannSolver
+END INTERFACE
 
-   INTERFACE EvaluateFlux1D
-      MODULE PROCEDURE EvaluateFlux1D
-   END INTERFACE
+INTERFACE EvaluateFlux1D
+  MODULE PROCEDURE EvaluateFlux1D
+END INTERFACE
 
-   INTERFACE ConsToPrim
-      MODULE PROCEDURE ConsToPrim
-   END INTERFACE
+INTERFACE ConsToPrim
+  MODULE PROCEDURE ConsToPrim
+END INTERFACE
 
-   INTERFACE PrimToCons
-      MODULE PROCEDURE PrimToCons
-   END INTERFACE
+INTERFACE PrimToCons
+  MODULE PROCEDURE PrimToCons
+END INTERFACE
 
-   INTERFACE Gravitational_Potential
-      MODULE PROCEDURE Gravitational_Potential
-   END INTERFACE
+INTERFACE Gravitational_Potential
+  MODULE PROCEDURE Gravitational_Potential
+END INTERFACE
+
+#ifdef GFWENO
+INTERFACE RiemannSolverCorner
+  MODULE PROCEDURE RiemannSolverCorner
+END INTERFACE
+#endif
 
 !-------------------------------------------------------------------------------!
-   PUBLIC :: ExactFunction
-   PUBLIC :: ExactFunctionWB
-   PUBLIC :: SourceTerms
-   PUBLIC :: GlobalFluxTerms
-   PUBLIC :: BoundaryConditions
-   PUBLIC :: TimeStep
-   PUBLIC :: RiemannSolver
-   PUBLIC :: EvaluateFlux1D
-   PUBLIC :: ConsToPrim
-   PUBLIC :: PrimToCons
-   PUBLIC :: Gravitational_Potential
+PUBLIC :: ExactFunction
+PUBLIC :: ExactFunctionWB
+PUBLIC :: SourceTerms
+PUBLIC :: GlobalFluxTerms
+PUBLIC :: BoundaryConditions
+PUBLIC :: TimeStep
+PUBLIC :: RiemannSolver
+PUBLIC :: EvaluateFlux1D
+PUBLIC :: ConsToPrim
+PUBLIC :: PrimToCons
+PUBLIC :: Gravitational_Potential
+#ifdef GFWENO
+PUBLIC :: RiemannSolverCorner 
+#endif
 !-------------------------------------------------------------------------------!
 !
 !
@@ -72,268 +81,268 @@ CONTAINS
 !
 !
 !===============================================================================!
-   SUBROUTINE ExactFunction(WhichInitialCondition,t,x,Cons)
+SUBROUTINE ExactFunction(WhichInitialCondition,t,x,Cons)
 !-------------------------------------------------------------------------------!
-      USE MOD_FiniteVolume2D_vars,ONLY: nVar
-      USE MOD_FiniteVolume2D_vars,ONLY: nDims
-      USE MOD_FiniteVolume2D_vars,ONLY: PI
-      USE MOD_FiniteVolume2D_vars,ONLY: MESH_X0
-      USE MOD_FiniteVolume2D_vars,ONLY: MESH_X1
-      USE MOD_FiniteVolume2D_vars,ONLY: MESH_SX
-      USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState1
-      USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState2
-      USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState3
-      USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState4
-      USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR
+USE MOD_FiniteVolume2D_vars,ONLY: nVar
+USE MOD_FiniteVolume2D_vars,ONLY: nDims
+USE MOD_FiniteVolume2D_vars,ONLY: PI
+USE MOD_FiniteVolume2D_vars,ONLY: MESH_X0
+USE MOD_FiniteVolume2D_vars,ONLY: MESH_X1
+USE MOD_FiniteVolume2D_vars,ONLY: MESH_SX
+USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState1
+USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState2
+USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState3
+USE MOD_FiniteVolume2D_vars,ONLY: PrimRefState4
+USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR
 #ifdef EqnEuler
-      USE MOD_FiniteVolume2D_vars,ONLY: Gmm
+USE MOD_FiniteVolume2D_vars,ONLY: Gmm
 #endif
 #ifdef SW
-      USE MOD_FiniteVolume2D_vars,ONLY: Gravity
-      USE MOD_FiniteVolume2D_vars,ONLY: Kappa
+USE MOD_FiniteVolume2D_vars,ONLY: Gravity
+USE MOD_FiniteVolume2D_vars,ONLY: Kappa
 #endif
 !-------------------------------------------------------------------------------!
-      IMPLICIT NONE
+IMPLICIT NONE
 !-------------------------------------------------------------------------------!
 ! >> FORMAL ARGUMENTS                                                           !
 !-------------------------------------------------------------------------------!
-      INTEGER,INTENT(IN) :: WhichInitialCondition
-      REAL,INTENT(IN)    :: t
-      REAL,INTENT(IN)    :: x(1:nDims)
-      REAL,INTENT(OUT)   :: Cons(1:nVar)
+INTEGER,INTENT(IN) :: WhichInitialCondition
+REAL,INTENT(IN)    :: t
+REAL,INTENT(IN)    :: x(1:nDims)
+REAL,INTENT(OUT)   :: Cons(1:nVar)
 !-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
-      REAL               :: Prim(1:nVar)
-      REAL               :: xc(2), xm(2), r, r0, hl, hr, r2, r20
-      CHARACTER(LEN=255) :: ErrorMessage
+REAL               :: Prim(1:nVar)
+REAL               :: xc(2), xm(2), r, r0, hl, hr, r2, r20
+CHARACTER(LEN=255) :: ErrorMessage
 !-------------------------------------------------------------------------------!
 !*OUR VARIABLES
-      REAL               :: Omega, Jamma, u_inf, v_inf, h_inf, DeltaH
-      INTEGER            :: power
-      REAL               :: ro_inf, p_inf, beta, delta_u, delta_v, delta_T
-      REAL               :: xmxc(1:2), x_wrt_BL(1:2), x_wrt_BL_bm(1:2), x_0(1:2), x_d(1:2)
+REAL               :: Omega, Jamma, u_inf, v_inf, h_inf, DeltaH
+INTEGER            :: power
+REAL               :: ro_inf, p_inf, beta, delta_u, delta_v, delta_T
+REAL               :: xmxc(1:2), x_wrt_BL(1:2), x_wrt_BL_bm(1:2), x_0(1:2), x_d(1:2)
 
 
 
 
-      Cons = 0.0
-      Prim = 0.0
-      SELECT CASE(WhichInitialCondition)
+Cons = 0.0
+Prim = 0.0
+SELECT CASE(WhichInitialCondition)
 #ifdef SW
-         !*------------------------------------------
-         !*[1] Unsteady smooth vortex for SW
-         !*------------------------------------------
-       CASE(1)
-         u_inf = 2.
-         v_inf = 3.
-         H_inf=1.
-         r0 = 1.
+  !*------------------------------------------
+  !*[1] Unsteady smooth vortex for SW
+  !*------------------------------------------
+CASE(1)
+  u_inf = 2.
+  v_inf = 3.
+  H_inf=1.
+  r0 = 1.
 
-         xm(1) = MESH_X0(1)+0.5*MESH_SX(1)
-         xm(2) = MESH_X0(2)+0.5*MESH_SX(2)
-         xc(1) = MODULO( x(1)-u_inf*t-MESH_X0(1) , Mesh_SX(1) ) + MESH_X0(1)-xm(1)
-         xc(2) = MODULO( x(2)-v_inf*t-MESH_X0(2) , Mesh_SX(2) ) + MESH_X0(2)-xm(2)
-         r     = (xc(1)**2 + xc(2)**2)
-         Omega = sqrt(2.*Gravity*hDerivSmoothAuxiliary(r))
+  xm(1) = MESH_X0(1)+0.5*MESH_SX(1)
+  xm(2) = MESH_X0(2)+0.5*MESH_SX(2)
+  xc(1) = MODULO( x(1)-u_inf*t-MESH_X0(1) , Mesh_SX(1) ) + MESH_X0(1)-xm(1)
+  xc(2) = MODULO( x(2)-v_inf*t-MESH_X0(2) , Mesh_SX(2) ) + MESH_X0(2)-xm(2)
+  r     = (xc(1)**2 + xc(2)**2)
+  Omega = sqrt(2.*Gravity*hDerivSmoothAuxiliary(r))
 
-         Prim(1) = H_inf
-         Prim(2) = u_inf
-         Prim(3) = v_inf
+  Prim(1) = H_inf
+  Prim(2) = u_inf
+  Prim(3) = v_inf
 
-         IF (r .LT. 1) THEN
-            Prim(1) = hSmoothAuxiliary(r)
-            Prim(2) = Prim(2)+Omega*(+xc(2))
-            Prim(3) = Prim(3)+Omega*(-xc(1))
-         END IF
+  IF (r .LT. 1) THEN
+    Prim(1) = hSmoothAuxiliary(r)
+    Prim(2) = Prim(2)+Omega*(+xc(2))
+    Prim(3) = Prim(3)+Omega*(-xc(1))
+  END IF
 
-         Prim(4)= Kappa*Prim(1)**Gmm
+  Prim(4)= Kappa*Prim(1)**Gmm
 
-         CALL PrimToCons(Prim,Cons)
+  CALL PrimToCons(Prim,Cons)
 #endif
 #ifdef EqnEuler
-         !*------------------------------------------
-         !*[2] Steady isentropic vortex
-         !*------------------------------------------
-       CASE(2)
+  !*------------------------------------------
+  !*[2] Steady isentropic vortex
+  !*------------------------------------------
+CASE(2)
 
-         u_inf=0.0
-         v_inf=0.0
+  u_inf=0.0
+  v_inf=0.0
 
-         !*Center of the vortex
-         xc=0.5*(MESH_X1+MESH_X0)
+  !*Center of the vortex
+  xc=0.5*(MESH_X1+MESH_X0)
 
-         !*Coordinates from the center of the vortex
-         xmxc=x-xc
+  !*Coordinates from the center of the vortex
+  xmxc=x-xc
 
-         !*Distance squared from the center of the vortex
-         r2=xmxc(1)**2+xmxc(2)**2
+  !*Distance squared from the center of the vortex
+  r2=xmxc(1)**2+xmxc(2)**2
 
-         !*Vortex amplitude
-         beta=5.0 !*5.0 0.1
+  !*Vortex amplitude
+  beta=5.0 !*5.0 0.1
 
-         delta_u=beta/(2.0*PI)*EXP( 0.5*( 1.0-r2 ) )*( -xmxc(2) )
-         delta_v=beta/(2.0*PI)*EXP( 0.5*( 1.0-r2 ) )*xmxc(1)
-         delta_T=-(Gmm-1.0)*beta**2/(8.0*Gmm*Pi**2)*EXP( 1.0-r2 )
+  delta_u=beta/(2.0*PI)*EXP( 0.5*( 1.0-r2 ) )*( -xmxc(2) )
+  delta_v=beta/(2.0*PI)*EXP( 0.5*( 1.0-r2 ) )*xmxc(1)
+  delta_T=-(Gmm-1.0)*beta**2/(8.0*Gmm*Pi**2)*EXP( 1.0-r2 )
 
-         Prim(1)=(1.0+delta_T)**( 1.0 / (Gmm-1.0) )
-         Prim(2)=delta_u
-         Prim(3)=delta_v
-         Prim(4)=(1.0+delta_T)**( Gmm / (Gmm-1.0) )
+  Prim(1)=(1.0+delta_T)**( 1.0 / (Gmm-1.0) )
+  Prim(2)=delta_u
+  Prim(3)=delta_v
+  Prim(4)=(1.0+delta_T)**( Gmm / (Gmm-1.0) )
 
-         CALL PrimToCons(Prim,Cons)
+  CALL PrimToCons(Prim,Cons)
 
-         !*------------------------------------------
-         !*[3] Unsteady isentropic vortex
-         !*------------------------------------------
-       CASE(3)
+  !*------------------------------------------
+  !*[3] Unsteady isentropic vortex
+  !*------------------------------------------
+CASE(3)
 
-         u_inf=1.0
-         v_inf=1.0
+  u_inf=1.0
+  v_inf=1.0
 
-         !*Original center of the vortex before the moevement
-         xc=0.5*(MESH_X1+MESH_X0)
+  !*Original center of the vortex before the moevement
+  xc=0.5*(MESH_X1+MESH_X0)
 
-         !*We want to get the initial position of x before the movement
+  !*We want to get the initial position of x before the movement
 
-         !*x with respect to bottom-left corner
-         x_wrt_BL=x-MESH_X0
+  !*x with respect to bottom-left corner
+  x_wrt_BL=x-MESH_X0
 
-         !*x with respect to bottom-left corner before movement
-         x_wrt_BL_bm(1)=x_wrt_BL(1)-u_inf*t
-         x_wrt_BL_bm(2)=x_wrt_BL(2)-v_inf*t
+  !*x with respect to bottom-left corner before movement
+  x_wrt_BL_bm(1)=x_wrt_BL(1)-u_inf*t
+  x_wrt_BL_bm(2)=x_wrt_BL(2)-v_inf*t
 
-         !*This is the position before movement modulo the length of the domain
-         !*NB: MODULO RESULT IS ALWAYS POSITIVE
-         x_wrt_BL_bm(1)=MODULO( x_wrt_BL_bm(1), MESH_SX(1) )
-         x_wrt_BL_bm(2)=MODULO( x_wrt_BL_bm(2), MESH_SX(2) )
+  !*This is the position before movement modulo the length of the domain
+  !*NB: MODULO RESULT IS ALWAYS POSITIVE
+  x_wrt_BL_bm(1)=MODULO( x_wrt_BL_bm(1), MESH_SX(1) )
+  x_wrt_BL_bm(2)=MODULO( x_wrt_BL_bm(2), MESH_SX(2) )
 
-         !*This is the initial position
-         x_0=MESH_X0+x_wrt_BL_bm
+  !*This is the initial position
+  x_0=MESH_X0+x_wrt_BL_bm
 
-         !*Distance squared from the center of the vortex at the initial time
-         x_d=x_0-xc
+  !*Distance squared from the center of the vortex at the initial time
+  x_d=x_0-xc
 
-         r2=x_d(1)**2+x_d(2)**2
+  r2=x_d(1)**2+x_d(2)**2
 
-         !*Vortex amplitude
-         beta=5.0 !*5.0 0.1
+  !*Vortex amplitude
+  beta=5.0 !*5.0 0.1
 
-         delta_u=beta/(2.0*PI)*EXP( 0.5*( 1.0-r2 ) )*( -x_d(2) )
-         delta_v=beta/(2.0*PI)*EXP( 0.5*( 1.0-r2 ) )*x_d(1)
-         delta_T=-(Gmm-1.0)*beta**2/(8.0*Gmm*Pi**2)*EXP( 1.0-r2 )
+  delta_u=beta/(2.0*PI)*EXP( 0.5*( 1.0-r2 ) )*( -x_d(2) )
+  delta_v=beta/(2.0*PI)*EXP( 0.5*( 1.0-r2 ) )*x_d(1)
+  delta_T=-(Gmm-1.0)*beta**2/(8.0*Gmm*Pi**2)*EXP( 1.0-r2 )
 
-         Prim(1)=(1.0+delta_T)**( 1.0 / (Gmm-1.0) )
-         Prim(2)=u_inf+delta_u
-         Prim(3)=v_inf+delta_v
-         Prim(4)=(1.0+delta_T)**( Gmm / (Gmm-1.0) )
+  Prim(1)=(1.0+delta_T)**( 1.0 / (Gmm-1.0) )
+  Prim(2)=u_inf+delta_u
+  Prim(3)=v_inf+delta_v
+  Prim(4)=(1.0+delta_T)**( Gmm / (Gmm-1.0) )
 
-         CALL PrimToCons(Prim,Cons)
+  CALL PrimToCons(Prim,Cons)
 
-         !*------------------------------------------
-         !*[4] Advection of smooth density
-         !*------------------------------------------
-       CASE(4)
-         u_inf = 1.0
-         v_inf = -0.5
-         p_inf = 1.0
-         Prim(1)=1.0+0.5*SIN( 4.0*Pi*( x(1)+x(2)-t*(u_inf+v_inf) ) )
-         Prim(2)=u_inf
-         Prim(3)=v_inf
-         Prim(4)=p_inf
+  !*------------------------------------------
+  !*[4] Advection of smooth density
+  !*------------------------------------------
+CASE(4)
+  u_inf = 1.0
+  v_inf = -0.5
+  p_inf = 1.0
+  Prim(1)=1.0+0.5*SIN( 4.0*Pi*( x(1)+x(2)-t*(u_inf+v_inf) ) )
+  Prim(2)=u_inf
+  Prim(3)=v_inf
+  Prim(4)=p_inf
 
-         CALL PrimToCons(Prim,Cons)
+  CALL PrimToCons(Prim,Cons)
 
-         !*------------------------------------------
-         !*[5] Advection of smooth density sin4
-         !*------------------------------------------
-       CASE(5)
-         u_inf = 1.0
-         v_inf = -0.5
-         p_inf = 1.0
-         Prim(1) = 2.0+SIN(2.0*PI*( x(1)+x(2)-t*(u_inf+v_inf) ))**4
-         Prim(2)=u_inf
-         Prim(3)=v_inf
-         Prim(4)=p_inf
+  !*------------------------------------------
+  !*[5] Advection of smooth density sin4
+  !*------------------------------------------
+CASE(5)
+  u_inf = 1.0
+  v_inf = -0.5
+  p_inf = 1.0
+  Prim(1) = 2.0+SIN(2.0*PI*( x(1)+x(2)-t*(u_inf+v_inf) ))**4
+  Prim(2)=u_inf
+  Prim(3)=v_inf
+  Prim(4)=p_inf
 
-         CALL PrimToCons(Prim,Cons)
+  CALL PrimToCons(Prim,Cons)
 
-         !*------------------------------------------
-         !*[892] Smooth periodic IC with the purpose of verifying conservation
-         !*------------------------------------------
-       CASE(892)
-         Prim(1)=8.0+0.5*SIN(2.0*Pi*x(1))
-         Prim(2)=0.5+COS(8.0*Pi*x(2))
-         Prim(3)=0.5+SIN(4.0*Pi*x(2))
-         Prim(4)=7.0+SIN(4.0*Pi*x(1))
+  !*------------------------------------------
+  !*[892] Smooth periodic IC with the purpose of verifying conservation
+  !*------------------------------------------
+CASE(892)
+  Prim(1)=8.0+0.5*SIN(2.0*Pi*x(1))
+  Prim(2)=0.5+COS(8.0*Pi*x(2))
+  Prim(3)=0.5+SIN(4.0*Pi*x(2))
+  Prim(4)=7.0+SIN(4.0*Pi*x(1))
 
-         CALL PrimToCons(Prim,Cons)
+  CALL PrimToCons(Prim,Cons)
 
 #endif
 #ifdef EqnAcoustics
 #endif
-       CASE DEFAULT
-         ErrorMessage = "Exact function not specified"
-         WRITE(*,*) ErrorMessage
-         STOP
-      END SELECT
+CASE DEFAULT
+  ErrorMessage = "Exact function not specified"
+  WRITE(*,*) ErrorMessage
+  STOP
+END SELECT
 
 !-------------------------------------------------------------------------------!
-   CONTAINS
+CONTAINS
 
 #if defined (SW) || defined (EqnShallowWater)
-      REAL FUNCTION hSmoothAuxiliary(x)
-         IMPLICIT NONE
-         REAL, INTENT(IN) :: x
+REAL FUNCTION hSmoothAuxiliary(x)
+  IMPLICIT NONE
+  REAL, INTENT(IN) :: x
 
-         hSmoothAuxiliary=1.-0.5*exp(-1./atan(1.-x)**3.)
+  hSmoothAuxiliary=1.-0.5*exp(-1./atan(1.-x)**3.)
 
-      END FUNCTION
+END FUNCTION
 
-      REAL FUNCTION hDerivSmoothAuxiliary(x)
-         IMPLICIT NONE
-         REAL, INTENT(IN) :: x
+REAL FUNCTION hDerivSmoothAuxiliary(x)
+  IMPLICIT NONE
+  REAL, INTENT(IN) :: x
 
-         hDerivSmoothAuxiliary=3.*0.5*exp(1./atan(x - 1.)**3.)/(atan(x - 1.)**4*((x - 1.)**2 + 1.))
+  hDerivSmoothAuxiliary=3.*0.5*exp(1./atan(x - 1.)**3.)/(atan(x - 1.)**4*((x - 1.)**2 + 1.))
 
-      END FUNCTION
+END FUNCTION
 #endif
 
-   END SUBROUTINE ExactFunction
+END SUBROUTINE ExactFunction
 !===============================================================================!
 !
 !
 !
 !===============================================================================!
-   SUBROUTINE ExactFunctionWB(WhichInitialCondition,x,Cons)
-      USE MOD_FiniteVolume2D_vars,ONLY: nVar
-      USE MOD_FiniteVolume2D_vars,ONLY: nDims
-      USE MOD_FiniteVolume2D_vars,ONLY: PI
-      USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR
+SUBROUTINE ExactFunctionWB(WhichInitialCondition,x,Cons)
+USE MOD_FiniteVolume2D_vars,ONLY: nVar
+USE MOD_FiniteVolume2D_vars,ONLY: nDims
+USE MOD_FiniteVolume2D_vars,ONLY: PI
+USE MOD_FiniteVolume2D_vars,ONLY: MIN_POSITIVE_VAR
 !-------------------------------------------------------------------------------!
-      IMPLICIT NONE
+IMPLICIT NONE
 !-------------------------------------------------------------------------------!
 !-------------------------------------------------------------------------------!
 ! >> FORMAL ARGUMENTS                                                           !
 !-------------------------------------------------------------------------------!
-      INTEGER,INTENT(IN) :: WhichInitialCondition
-      REAL,INTENT(IN)    :: x(1:nDims)
-      REAL,INTENT(OUT)   :: Cons(1:nVar)
+INTEGER,INTENT(IN) :: WhichInitialCondition
+REAL,INTENT(IN)    :: x(1:nDims)
+REAL,INTENT(OUT)   :: Cons(1:nVar)
 !-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
-      REAL               :: Prim(1:nVar)
-      CHARACTER(LEN=255) :: ErrorMessage
+REAL               :: Prim(1:nVar)
+CHARACTER(LEN=255) :: ErrorMessage
 
-      SELECT CASE (WhichInitialCondition)
+SELECT CASE (WhichInitialCondition)
 
-       CASE DEFAULT
-         ErrorMessage = "Exact WB function not specified"
-         WRITE(*,*) ErrorMessage
-         STOP
-      END SELECT
+  CASE DEFAULT
+    ErrorMessage = "Exact WB function not specified"
+    WRITE(*,*) ErrorMessage
+    STOP
+END SELECT
 
-   END SUBROUTINE ExactFunctionWB
+END SUBROUTINE ExactFunctionWB
 !===============================================================================!
 !
 !
@@ -2297,6 +2306,157 @@ SUBROUTINE RiemannSolver(ConsL,ConsR,NormVect,TangVect,Flux)
 !===============================================================================!
 !
 !
+#ifdef GFWENO
+!
+!
+!===============================================================================!
+SUBROUTINE RiemannSolverCorner(FluxBL,FluxBR,FluxTR,FluxTL,&
+  ConsBL, ConsBR, ConsTR,ConsTL,&
+  NumFluxBL, NumFluxBR, NumFluxTR,NumFluxTL)
+!-------------------------------------------------------------------------------!
+USE MOD_FiniteVolume2D_vars,ONLY: nVar
+USE MOD_FiniteVolume2D_vars,ONLY: nGPs
+USE MOD_FiniteVolume2D_vars,ONLY: nDims
+USE MOD_FiniteVolume2D_vars,ONLY: Gmm
+USE MOD_FiniteVolume2D_vars,ONLY: WhichRiemannSolver
+USE MOD_FiniteVolume2D_vars,ONLY: MESH_DX
+USE exact_riemann_mod,      ONLY: exact_riemann
+USE exact_riemann_mod,      ONLY: sample
+#ifdef SW
+USE MOD_FiniteVolume2D_vars,ONLY: Kappa
+#endif
+!-------------------------------------------------------------------------------!
+IMPLICIT NONE
+!-------------------------------------------------------------------------------!
+! >> FORMAL ARGUMENTS                                                           !
+!-------------------------------------------------------------------------------!
+REAL,INTENT(IN)  :: ConsBL(1:nVar),ConsTL(1:nVar)
+REAL,INTENT(IN)  :: ConsBR(1:nVar),ConsTR(1:nVar)
+REAL,INTENT(IN)  :: FluxBL(1:nVar),FluxTL(1:nVar)
+REAL,INTENT(IN)  :: FluxBR(1:nVar),FluxTR(1:nVar)
+REAL,INTENT(OUT) :: NumFluxBL(1:nVar),NumFluxTL(1:nVar)
+REAL,INTENT(OUT) :: NumFluxBR(1:nVar),NumFluxTR(1:nVar)
+
+!-------------------------------------------------------------------------------!
+! >> LOCAL VARIABLES                                                            !
+!-------------------------------------------------------------------------------!
+REAL             :: Cons_aver(1:nVar)
+REAL             :: Jump_Cons(1:nVar)
+REAL             :: Jump_Flux(1:nVar)
+REAL             :: Central_Flux(1:nVar)
+INTEGER          :: iGP
+!-------------------------------------------------------------------------------!
+! >> LOCAL FOR EXACT RIEMANN SOLVER                                             !
+!-------------------------------------------------------------------------------!
+REAL, PARAMETER             :: C=0.50
+REAL                        :: tau
+REAL                        :: al, ar
+REAL                        :: pl, pr
+REAL                        :: rho_star_l,rho_star_r
+REAL                        :: speedl, speedr
+REAL                        :: s_max
+REAL                        :: pm, um
+REAL                        :: u_norm_l, u_norm_r
+REAL                        :: u_tan_l,  u_tan_r
+REAL, DIMENSION(3+nDims)    :: vstar
+REAL, DIMENSION(2+nDims)    :: w
+REAL, DIMENSION(nVar,nVar)  :: JX, JY
+!-------------------------------------------------------------------------------!
+
+Cons_aver(1:nVar) = 0.25*(ConsBL(1:nVar)+ConsBR(1:nVar)+ConsTR(1:nVar)+ConsTL(1:nVar))
+Jump_Cons(1:nVar) = ConsBL(1:nVar)-ConsBR(1:nVar)-ConsTL(1:nVar)+ConsTR(1:nVar)
+
+Central_Flux(1:nVar) = 0.25*(FluxBL(1:nVar)+FluxBR(1:nVar)+FluxTR(1:nVar)+FluxTL(1:nVar))
+Jump_Flux(1:nVar) = FluxBL(1:nVar)-FluxBR(1:nVar)+FluxTR(1:nVar)-FluxTL(1:nVar)
+
+SELECT CASE(WhichRiemannSolver)
+  CASE(1) !*Rusanov
+    s_max = problem.max_eigenvalue(Cons_aver)
+
+
+    NumFluxBL(1:nVar) = +( Central_Flux(1:nVar)) + MESH_DX(1)* s_max* (ConsBL(1:nVar)-Cons_aver(1:nVar))   
+    NumFluxBR(1:nVar) = -( Central_Flux(1:nVar)) + MESH_DX(1)* s_max* (ConsBR(1:nVar)-Cons_aver(1:nVar))  
+    NumFluxTL(1:nVar) = -( Central_Flux(1:nVar)) + MESH_DX(1)* s_max* (ConsTL(1:nVar)-Cons_aver(1:nVar))   
+    NumFluxTR(1:nVar) = +( Central_Flux(1:nVar)) + MESH_DX(1)* s_max* (ConsTR(1:nVar)-Cons_aver(1:nVar))  
+
+#ifdef EqnShallowWater 
+  CASE(3) !* SUPG
+    
+    JX = problem.JacobianX(q_aver)
+    JY = problem.JacobianY(q_aver)
+    
+    s_max = problem.max_eigenvalue(Cons_aver)
+
+    tau = C * 1./s_max   /4.
+
+    NumFluxBL(1:nVar) = +Central_Flux(1:nVar)  + tau*(-MATMUL(JX,Jump_Flux)&
+                                                      -MATMUL(JY,Jump_Flux))
+    NumFluxBR(1:nVar) = -Central_Flux(1:nVar)  + tau*( MATMUL(JX,Jump_Flux)&
+                                                      -MATMUL(JY,Jump_Flux))
+    NumFluxTL(1:nVar) = -Central_Flux(1:nVar)  + tau*(-MATMUL(JX,Jump_Flux)&
+                                                      +MATMUL(JY,Jump_Flux))
+    NumFluxTR(1:nVar) = +Central_Flux(1:nVar)  + tau*( MATMUL(JX,Jump_Flux)&
+                                                      +MATMUL(JY,Jump_Flux))
+#endif
+#ifdef EqnEuler
+  CASE(2) !*Exact
+    al=SQRT(Gmm*PrimLL(4,iGP)/PrimLL(1,iGP)) !*sound_ro_e_scal(ul(1),ul(2+ndim),eos)
+    ar=SQRT(Gmm*PrimRR(4,iGP)/PrimRR(1,iGP)) !*sound_ro_e_scal(ur(1),ur(2+ndim),eos)
+    pl=PrimLL(4,iGP) !*pres_ro_e_scal (ul(1),ul(2+ndim),eos)
+    pr=PrimRR(4,iGP) !*pres_ro_e_scal (ur(1),ur(2+ndim),eos)
+    u_norm_l=PrimLL(2,iGP) !*SUM(ul(2:1+ndim)*n_norm)
+    u_norm_r=PrimRR(2,iGP) !*SUM(ur(2:1+ndim)*n_norm)
+    u_tan_l=PrimLL(3,iGP)  !*-ul(2)*n_norm(2)+ul(3)*n_norm(1)
+    u_tan_r=PrimRR(3,iGP)  !*-ur(2)*n_norm(2)+ur(3)*n_norm(1)
+
+
+    !*CALL exact_riemann(Gmm,         ul(1),         ur(1), rho_star_l, rho_star_r, u_norm_l, u_norm_r, um,   pl, pr, pm,   al,ar, speedl, speedr)
+    CALL exact_riemann(  Gmm, PrimLL(1,iGP), PrimRR(1,iGP), rho_star_l, rho_star_r, u_norm_l, u_norm_r, um,   pl, pr, pm,   al,ar, speedl, speedr)
+    !*OUT       !*OUT                           !*OUT         !*OUT        !*OUT   !*OUT
+
+    !*CALL sample(s,  vstar(3+ndim), vstar(2), vstar(1), ul(1),         ur(1),         u_norm_l, u_norm_r, um, pl, pr, pm, al, ar)
+    CALL sample(  s, vstar(3+nDims), vstar(2), vstar(1), PrimLL(1,iGP), PrimRR(1,iGP), u_norm_l, u_norm_r, um, pl, pr, pm, al, ar)
+    !*OUT          !*OUT     !*OUT
+
+    !*I DO NOT NEED TO PASS TO THE INTERNAL ENERGY
+    !*vstar(2+ndim)=e_ro_pres_scal(vstar(1),vstar(3+ndim),eos) ! energie interne
+
+
+
+    w(1)=vstar(1)
+    IF (um>0.0) THEN
+        w(2)=vstar(2)
+        w(3)=u_tan_l
+    ELSE
+        w(2)=vstar(2)
+        w(3)=u_tan_r
+    ENDIF
+    w(4)=vstar(3+nDims)
+
+    !*I DO NOT NEED TO ROTATE
+    ! vstar(2)=w(2)*n_norm(1)-w(3)*n_norm(2)
+    ! vstar(3)=w(2)*n_norm(2)+w(3)*n_norm(1)
+    ! vstar: ici rho, u,v,eint,p
+
+    CALL EvaluateFlux1D(w,Flux(1:nVar,iGP))
+#endif
+  CASE DEFAULT
+    PRINT*, "Riemann Solver not defined"
+    PRINT*, "Riemann Solver was", WhichRiemannSolver
+    STOP
+  END SELECT
+
+  ! Rotating back the momentum components
+  Flux(2:3,iGP) = NormVect(1:nDims,iGP)*Flux(2,iGP) &
+    + TangVect(1:nDims,iGP)*Flux(3,iGP)
+END DO
+
+!-------------------------------------------------------------------------------!
+END SUBROUTINE RiemannSolverCorner
+!===============================================================================!
+!
+!
+#endif
 !
 !===============================================================================!
    SUBROUTINE RiemannSolverByRusanov(ConsL,ConsR,PrimL,PrimR,Flux)

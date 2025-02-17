@@ -634,21 +634,19 @@ CONTAINS
 #ifdef GFWENO
 !
 !
-!!===============================================================================!
-   SUBROUTINE ReconstructionXY_Global()
+!
+!===============================================================================!
+SUBROUTINE ReconstructionXY_Global()
 !-------------------------------------------------------------------------------!
-      USE MOD_FiniteVolume2D_vars,ONLY: V
-      USE MOD_FiniteVolume2D_vars,ONLY: FF
-      USE MOD_FiniteVolume2D_vars,ONLY: WM
-      USE MOD_FiniteVolume2D_vars,ONLY: WP
-      USE MOD_FiniteVolume2D_vars,ONLY: Eta
-      USE MOD_FiniteVolume2D_vars,ONLY: MESH_DX
-      USE MOD_FiniteVolume2D_vars,ONLY: nVar
-      USE MOD_FiniteVolume2D_vars,ONLY: nElemsX
-      USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
-      USE MOD_FiniteVolume2D_vars,ONLY: Bath
-      USE MOD_FiniteVolume2D_vars,ONLY: Ind
-      USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
+USE MOD_FiniteVolume2D_vars,ONLY: U
+USE MOD_FiniteVolume2D_vars,ONLY: nVar
+USE MOD_FiniteVolume2D_vars,ONLY: nElemsX
+USE MOD_FiniteVolume2D_vars,ONLY: nGhosts
+USE MOD_FiniteVolume2D_vars,ONLY: Eta
+USE MOD_FiniteVolume2D_vars,ONLY: Ind
+USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
+USE MOD_FiniteVolume2D_vars,ONLY: FG_reconstructed_corner
+USE MOD_FiniteVolume2D_vars,ONLY: Cons_reconstructed_corner
 !-------------------------------------------------------------------------------!
       IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -656,48 +654,73 @@ CONTAINS
 !-------------------------------------------------------------------------------!
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
-      INTEGER            :: ii, jj
-      REAL               :: FGtempL(nVar,0:nElemsX+1,-nGhosts:nElemsY+nGhosts+1)
-      REAL               :: FGtempR(nVar,0:nElemsX+1,-nGhosts:nElemsY+nGhosts+1)
-      REAL               :: FG_reconstructed_corner(nVar,1:2,1:2,0:nElemsX+1,0:nElemsY+1)
-      CHARACTER(LEN=255) :: ErrorMessage
+INTEGER            :: ii, jj
+REAL               :: tempL(nVar,0:nElemsX+1,-nGhosts:nElemsY+nGhosts+1)
+REAL               :: tempR(nVar,0:nElemsX+1,-nGhosts:nElemsY+nGhosts+1)
+CHARACTER(LEN=255) :: ErrorMessage
 !-------------------------------------------------------------------------------!
 
 ! global flux reconstruction
-      SELECT CASE (Reconstruction)
-       CASE(1)
-         DO ii=0,nElemsX+1 
-            DO jj=-nGhosts,nElemsY+nGhosts+1
-               DO iVar=1,nVar
-                  CALL WENO1_FirstSweep(&
-                           FG(iVar,ii-nGhosts:ii-nGhosts,jj),FGtempL(iVar,ii,jj),FGtempR(iVar,ii,jj))
-               END DO                  
-            END DO
-         END DO
+SELECT CASE (Reconstruction)
+  CASE(1)
+    ! Reconstruct F+G global flux in corners
+    DO ii=0,nElemsX+1 
+      DO jj=-nGhosts,nElemsY+nGhosts+1
+          DO iVar=1,nVar
+            CALL WENO1_FirstSweep(&
+                      FG(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+          END DO                  
+      END DO
+    END DO
 
-         DO ii=0,nElemsX+1 
-            DO jj=0,nElemsY+1
-               DO iVar=1,nVar
-                  CALL WENO1_FirstSweep(&
-                           FGtempL(iVar,ii,jj-nGhosts:jj+nGhosts),&
-                           FG_reconstructed_corner(iVar,1,1,ii,jj),FG_reconstructed_corner(iVar,1,2,ii,jj))
-                  CALL WENO1_FirstSweep(&
-                           FGtempR(iVar,ii,jj-nGhosts:jj+nGhosts),&
-                           FG_reconstructed_corner(iVar,2,1,ii,jj),FG_reconstructed_corner(iVar,2,2,ii,jj))
+    DO ii=0,nElemsX+1 
+      DO jj=0,nElemsY+1
+          DO iVar=1,nVar
+            CALL WENO1_FirstSweep(&
+                      tempL(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      FG_reconstructed_corner(iVar,1,1,ii,jj),FG_reconstructed_corner(iVar,1,2,ii,jj))
+            CALL WENO1_FirstSweep(&
+                      tempR(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      FG_reconstructed_corner(iVar,2,1,ii,jj),FG_reconstructed_corner(iVar,2,2,ii,jj))
 
-               END DO                  
-            END DO
-         END DO
+          END DO                  
+      END DO
+    END DO
+
+    ! Reconstruct conservative variables in corners
+    ! I'm not sure if I should reconstruct Eta instead of h...
+    DO ii=0,nElemsX+1 
+      DO jj=-nGhosts,nElemsY+nGhosts+1
+          DO iVar=1,nVar
+            CALL WENO1_FirstSweep(&
+                      U(iVar,ii-nGhosts:ii-nGhosts,jj),tempL(iVar,ii,jj),tempR(iVar,ii,jj))
+          END DO                  
+      END DO
+    END DO
+
+    DO ii=0,nElemsX+1 
+      DO jj=0,nElemsY+1
+          DO iVar=1,nVar
+            CALL WENO1_FirstSweep(&
+                      tempL(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      Cons_reconstructed_corner(iVar,1,1,ii,jj),Cons_reconstructed_corner(iVar,1,2,ii,jj))
+            CALL WENO1_FirstSweep(&
+                      tempR(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                      Cons_reconstructed_corner(iVar,2,1,ii,jj),Cons_reconstructed_corner(iVar,2,2,ii,jj))
+
+          END DO                  
+      END DO
+    END DO
 
 
-       CASE DEFAULT
-         ErrorMessage = "Reconstruction not implemented"
-         WRITE(*,*) ErrorMessage
-         STOP
-      END SELECT
+  CASE DEFAULT
+    ErrorMessage = "Reconstruction not implemented"
+    WRITE(*,*) ErrorMessage
+    STOP
+END SELECT
 
 !-------------------------------------------------------------------------------!
-   END SUBROUTINE ReconstructionXY_Global
+END SUBROUTINE ReconstructionXY_Global
 !===============================================================================!
 !
 !

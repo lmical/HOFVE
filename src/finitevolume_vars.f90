@@ -106,8 +106,9 @@ REAL, ALLOCATABLE   :: RY(:,:,:) ! \int^y SY
 REAL, ALLOCATABLE   :: RX_interface(:,:,:,:) 
 REAL, ALLOCATABLE   :: RY_interface(:,:,:,:)   
 REAL, ALLOCATABLE   :: FG(:,:,:) ! FFX + FFY
-REAL, ALLOCATABLE   :: FG_corner(:,:,:) ! (FFX + FFY)_{i\pm1/2,j\pm1/2} Numerical corner flux
+REAL, ALLOCATABLE   :: FG_corner(:,:,:,:,:) ! (FFX + FFY)_{i\pm1/2,j\pm1/2} Numerical corner flux
 REAL, ALLOCATABLE   :: FG_reconstructed_corner(:,:,:,:,:) ! (FFX + FFY)_{i\pm1/2,j\pm1/2} Numerical corner flux
+REAL, ALLOCATABLE   :: Cons_reconstructed_corner(:,:,:,:,:) ! (Cons)_{i\pm1/2,j\pm1/2} Numerical corner flux
 REAL, ALLOCATABLE   :: Eta(:,:)
 REAL, ALLOCATABLE   :: Bath(:,:)
 REAL, ALLOCATABLE   :: Bath_interfaceX(:,:,:,:)
