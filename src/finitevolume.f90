@@ -179,6 +179,8 @@ ALLOCATE( RY(1:nGPs,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! \i
 ALLOCATE( RX_interface(1:2,1:nGPs,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1)) 
 ALLOCATE( RY_interface(1:2,1:nGPs,nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))   
 ALLOCATE(FG(1:nVar,-nGhosts:nElemsX+nGhosts+1,-nGhosts:nElemsY+nGhosts+1)) ! FFX + FFY
+ALLOCATE(FG_corner(1:nVar,0:nElemsX,0:nElemsY)) 
+ALLOCATE(FG_reconstructed_corner(1:nVar,1:2,1:2,0:nElemsX+1,0:nElemsY+1)) 
 ALLOCATE(Eta(-2*nGhosts:nElemsX+2*nGhosts+1,-2*nGhosts:nElemsY+2*nGhosts+1))
 ALLOCATE(Bath(-2*nGhosts:nElemsX+2*nGhosts+1,-2*nGhosts-1:nElemsY+2*nGhosts+1))
 ALLOCATE(Bath_interfaceX(1:2,1:nGPs,-nGhosts-1:nElemsX+nGhosts+1,-nGhosts-1:nElemsY+nGhosts+1))
@@ -453,6 +455,10 @@ USE MOD_Reconstruction, ONLY: ReconstructionFixX
 USE MOD_Reconstruction, ONLY: ReconstructionFixY
 USE MOD_ShocksIndicator,ONLY: ShocksIndicatorX
 USE MOD_ShocksIndicator,ONLY: ShocksIndicatorY
+#ifdef GFWENO
+USE MOD_Equation,       ONLY: GlobalFluxTerms
+USE MOD_Reconstruction, ONLY: ReconstructionXY_Global
+#endif
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -521,6 +527,10 @@ USE MOD_FiniteVolume2D_vars,ONLY: DestructionSparse
 USE MOD_FiniteVolume2D_vars,ONLY: ColumnsVector
 USE MOD_FiniteVolume2D_vars,ONLY: RowStart
 #endif
+
+#ifdef GFWENO
+USE MOD_FiniteVolume2D_vars,ONLY: FG_corner
+#endif
 !-------------------------------------------------------------------------------!
 IMPLICIT NONE
 !-------------------------------------------------------------------------------!
@@ -584,9 +594,16 @@ DO jj=1,nElemsY
                      - (FY(2:nVar,ii+0,jj+0)-FY(2:nVar,ii+0,jj-1))/Mesh_DX(2)
 
 #else
+
+#ifdef GFWENO
+
+    Ut(1:nVar,ii,jj) = -( FG_corner(1:nVar,ii-1,jj-1) - FG_corner(1:nVar,ii-1,jj+0) - FG_corner(1:nVar,ii+0,jj-1) + FG_corner(1:nVar,ii+0,jj+0) )/Mesh_DX(1)/Mesh_DX(2)
+
+#else
     Ut(1:nVar,ii,jj) = S(1:nVar,ii,jj) &
                      - (FX(1:nVar,ii+0,jj+0)-FX(1:nVar,ii-1,jj+0))/Mesh_DX(1) &
                      - (FY(1:nVar,ii+0,jj+0)-FY(1:nVar,ii+0,jj-1))/Mesh_DX(2)
+#endif
 
 #endif
   END DO !ii
@@ -918,6 +935,7 @@ DEALLOCATE(RY) ! \int^y SY
 DEALLOCATE(RX_interface) 
 DEALLOCATE(RY_interface)   
 DEALLOCATE(FG) ! FFX + FFY
+DEALLOCATE(FG_corner) 
 DEALLOCATE(Eta)
 DEALLOCATE(Eta_interfaceX)
 DEALLOCATE(Eta_interfaceY)

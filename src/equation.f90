@@ -383,7 +383,7 @@ REAL               :: Utemp1X(0:nVar,nGPs,-2*nGhosts:nElemsX+2*nGhosts+1)
 REAL               :: Utemp2X(0:nVar,nGPs,nGPs)
 REAL               :: Utemp1Y(0:nVar,nGPs,-2*nGhosts:nElemsY+2*nGhosts+1)
 REAL               :: Utemp2Y(0:nVar,nGPs,nGPs)
-REAL               :: Vtemp(nVar,nGPs,nGPs) 
+REAL               :: Vtemp(nVar,nGPs,nGPs), FluxX_int, FluxY_int
 INTEGER            :: ii, iGP, iVar
 CHARACTER(LEN=255) :: ErrorMessage
 !-------------------------------------------------------------------------------!
@@ -534,7 +534,7 @@ SELECT CASE (Reconstruction)
     STOP
 END SELECT
 
-FluxX(2,:,:,:) = FluxX(2,:,:,:) + RX
+FluxX(2,:,:,:) = FluxX(2,:,:,:) + RX  ! (FluxX)_{jq,\bar i}= (Fx+Rx)_{jq,\bar i} 
 FluxY(3,:,:,:) = FluxY(3,:,:,:) + RY
 FFX = 0.
 FFY = 0.
@@ -543,20 +543,34 @@ FFY_interface = 0.
 
 FG = 0.
 
-!!!!!!!!!!!!!!!!!!!  -----    MUST BE CHECKED  -----  !!!!!!!!!!!!!!!!!!!!!!
-! NO JUMP AT THE INTERFACE ?  I TRIED TO AVOID OTHER SWEEPS
 DO ii=-nGhosts,nElemsX+nGhosts+1
   DO jj=-nGhosts,nElemsY+nGhosts+1
       DO iVar=1,nVar
-         CALL SourceInterpIntegralCoeff(FluxX(iVar,1:nGPs,ii,jj), FFX(nVar,ii,jj))
-         FFX(iVar,ii,jj) = FFX(iVar,ii,jj) * MESH_DX(2)  !\int^y FX + RX
-         FFX_interface(2,iVar,ii,jj) = FFX_interface(1,iVar,ii,jj) + MESH_DX(2)*FFX(iVar,ii,jj)
-         FFX_interface(1,iVar,ii,jj+1) = FFX_interface(2,iVar,ii,jj)
+         ! Build FFX
+         CALL SourceInterpIntegralCoeff(FluxX(iVar,1:nGPs,ii,jj), FluxX_int)
+         FFX(iVar,ii,jj) = FFX_interface(1,iVar,ii,jj) + FluxX_int * MESH_DX(2)  !\int^{y_j} FX + RX until cell average 
 
-         CALL SourceInterpIntegralCoeff(FluxY(iVar,1:nGPs,ii,jj), FFY(nVar,ii,jj))
-         FFY(nVar,ii,jj) = FFY(nVar,ii,jj) * MESH_DX(1) !\int^x FY + RY
-         FFY_interface(2,iVar,ii,jj) = FFY_interface(1,iVar,ii,jj) + MESH_DX(1)*FFY(iVar,ii,jj)
-         FFY_interface(1,iVar,ii+1,jj) = FFY_interface(2,iVar,ii,jj)
+         FluxX_int = 0.
+         DO jGP = 1,nGPs
+            FluxX_int  = FluxX_int + WeightsGP(jGP) * FluxX(iVar,jGP,ii,jj) 
+         END DO
+
+        ! \int^{y_j+1/2} FX + RX until right interface
+         FFX_interface(2,iVar,ii,jj) = FFX_interface(1,iVar,ii,jj) + MESH_DX(2)* FluxX_int
+         FFX_interface(1,iVar,ii,jj+1) = FFX_interface(2,iVar,ii,jj)  ! no jump
+         
+         ! Build FFY
+         CALL SourceInterpIntegralCoeff(FluxY(iVar,1:nGPs,ii,jj), FluxY_int)
+         FFY(nVar,ii,jj) = FFY_interface(1,iVar,ii+1,jj) + FluxY_int * MESH_DX(1) !\int^{x_i} FY + RY until cell average
+
+         FluxY_int = 0.
+         DO iGP = 1,nGPs
+            FluxY_int  = FluxY_int + WeightsGP(iGP) * FluxY(iVar,iGP,ii,jj) 
+         END DO
+         
+         ! \int^{x_i+1/2} FY + RY until right interface
+         FFY_interface(2,iVar,ii,jj) = FFY_interface(1,iVar,ii,jj) + MESH_DX(1)*FluxY_int
+         FFY_interface(1,iVar,ii+1,jj) = FFY_interface(2,iVar,ii,jj)  ! no jump
       END DO
    END DO  
 END DO
@@ -891,6 +905,49 @@ SUBROUTINE Bath2Interfaces(b_quad,BathInterface)
 
 
 END SUBROUTINE Bath2Interfaces
+!===============================================================================!
+!
+!
+!
+!
+!===============================================================================!
+SUBROUTINE SourceInterpIntegralCoeff(S_quad, R_ave)
+!-------------------------------------------------------------------------------!
+! This function provides the coeffienct to compute the cell average of the the integral
+! of S_quad: meaning \sum_q w_q \int_{x_i-1/2}^xq L_\theta(x) S(x_theta) 
+USE MOD_FiniteVolume2D_vars,ONLY: nGPs
+USE MOD_FiniteVolume2D_vars,ONLY: Reconstruction
+!-------------------------------------------------------------------------------!
+IMPLICIT NONE
+!-------------------------------------------------------------------------------!
+! >> FORMAL ARGUMENTS                                                           !
+!-------------------------------------------------------------------------------!
+REAL,INTENT(IN)  :: S_quad(1:nGPs)
+REAL,INTENT(OUT) :: R_ave
+!-------------------------------------------------------------------------------!
+! >> LOCAL VARIABLES                                                            !
+!-------------------------------------------------------------------------------!
+CHARACTER(LEN=255) :: ErrorMessage
+
+
+SELECT CASE (Reconstruction)
+    CASE(0,1,2)
+      R_ave = +0.5000000000000000 * S_quad(1)
+    CASE(3)
+      R_ave = +0.3943375672974064 * S_quad(1)+0.1056624327025936 * S_quad(2)
+    CASE(4)
+      R_ave = +0.1618513208623103 * S_quad(1)+0.2184655362953806 * S_quad(2)+0.1076070411358925 * S_quad(3)+0.0120761017064166 * S_quad(4)
+
+    CASE DEFAULT
+      ErrorMessage = "Reconstruction not implemented in Source Coefficients"
+      WRITE(*,*) ErrorMessage
+      STOP
+  END SELECT
+
+
+!-------------------------------------------------------------------------------!
+END SUBROUTINE SourceInterpIntegralCoeff
+
  !===============================================================================!
  !
 #else

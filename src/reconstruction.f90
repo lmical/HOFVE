@@ -657,40 +657,39 @@ CONTAINS
 ! >> LOCAL VARIABLES                                                            !
 !-------------------------------------------------------------------------------!
       INTEGER            :: ii, jj
+      REAL               :: FGtempL(nVar,0:nElemsX+1,-nGhosts:nElemsY+nGhosts+1)
+      REAL               :: FGtempR(nVar,0:nElemsX+1,-nGhosts:nElemsY+nGhosts+1)
+      REAL               :: FG_reconstructed_corner(nVar,1:2,1:2,0:nElemsX+1,0:nElemsY+1)
       CHARACTER(LEN=255) :: ErrorMessage
 !-------------------------------------------------------------------------------!
 
 ! global flux reconstruction
       SELECT CASE (Reconstruction)
        CASE(1)
-         DO ii=0,nElemsX+1
-            WM(1:nVar,ii) = FF(1:nVar,ii)
-            WP(1:nVar,ii) = FF(1:nVar,ii)
+         DO ii=0,nElemsX+1 
+            DO jj=-nGhosts,nElemsY+nGhosts+1
+               DO iVar=1,nVar
+                  CALL WENO1_FirstSweep(&
+                           FG(iVar,ii-nGhosts:ii-nGhosts,jj),FGtempL(iVar,ii,jj),FGtempR(iVar,ii,jj))
+               END DO                  
+            END DO
          END DO
-       CASE(2)
-         !DO ii=0,nElemsX+1
-         !  CALL MUSCL_Global(&
-         !            V(1:nVar,-nGhosts+ii:ii+nGhosts),&
-         !            FF(1:nVar,-nGhosts+ii:ii+nGhosts),&
-         !            WM(1:nVar,ii),&
-         !            WP(1:nVar,ii),&
-         !            Bath(-nGhosts+ii:ii+nGhosts),&
-         !            MESH_DX)
-         !END DO
-         ErrorMessage = "Reconstruction not implemented in ReconstructionXGlobal"
-         WRITE(*,*) ErrorMessage
-         STOP
-       CASE(0,3,4)
-         DO ii=0,nElemsX+1
-            CALL WENO_Global_XDIR(&
-               V(1:nVar,-nGhosts+ii:ii+nGhosts),&
-               FF(1:nVar,-nGhosts+ii:ii+nGhosts),&
-               WM(1:nVar,ii),&
-               WP(1:nVar,ii),&
-               Bath(-nGhosts+ii:ii+nGhosts),&
-               MESH_DX,&
-               Reconstruction)
+
+         DO ii=0,nElemsX+1 
+            DO jj=0,nElemsY+1
+               DO iVar=1,nVar
+                  CALL WENO1_FirstSweep(&
+                           FGtempL(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                           FG_reconstructed_corner(iVar,1,1,ii,jj),FG_reconstructed_corner(iVar,1,2,ii,jj))
+                  CALL WENO1_FirstSweep(&
+                           FGtempR(iVar,ii,jj-nGhosts:jj+nGhosts),&
+                           FG_reconstructed_corner(iVar,2,1,ii,jj),FG_reconstructed_corner(iVar,2,2,ii,jj))
+
+               END DO                  
+            END DO
          END DO
+
+
        CASE DEFAULT
          ErrorMessage = "Reconstruction not implemented"
          WRITE(*,*) ErrorMessage
