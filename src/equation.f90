@@ -1160,11 +1160,12 @@ SUBROUTINE SourceTerms(t)
   DO ii=-nGhosts,nElemsX+1+nGhosts
     DO jj=-nGhosts,nElemsX+1+nGhosts
       DO iGP=1,nGPs
-        DO jGP=1,nGPs
-          S_int(2,jGP,ii,jj) = S_int(2,jGP,ii,jj) + WeightsGP(iGP,jGP) * Source_weights(2,iGP,jGP,ii,jj)
-          S_int(3,iGP,ii,jj) = S_int(3,iGP,ii,jj) + WeightsGP(iGP,jGP) * Source_weights(3,iGP,jGP,ii,jj)
-        ENDDO
+        S_int(2,jGP,ii,jj) = S_int(2,jGP,ii,jj) + quadWeights1D(iGP) * Source_weights(2,iGP,jGP,ii,jj)
       ENDDO
+      DO jGP=1,nGPs
+        S_int(3,iGP,ii,jj) = S_int(3,iGP,ii,jj) + quadWeights1D(jGP) * Source_weights(3,iGP,jGP,ii,jj)
+      ENDDO
+
       DO jGP=1,nGPs
         S_int(2,jGP,ii,jj) = S_int(2,jGP,ii,jj) - 0.5 * Gravity * ( Bath_interfaceX(2,jGP,ii,jj)**2 - Bath_interfaceX(1,jGP,ii,jj)**2 ) / MESH_DX(1)
       ENDDO
